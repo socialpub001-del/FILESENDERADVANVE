@@ -3,484 +3,933 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR Send - Ultimate</title>
+    <title>QR Send - Ultimate 3D</title>
     
     <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        :root { --primary: #075e54; --secondary: #128c7e; --bg: #e5ddd5; --white: #fff; --gray: #f0f2f5; --active-tab: #075e54; --inactive-tab: #999; }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; -webkit-tap-highlight-color:transparent; }
-        body { background: var(--bg); height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
+        /* --- CORE VISUALS --- */
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-attachment: fixed;
+            height: 100dvh;
+            overflow: hidden;
+            color: #e2e8f0;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+            outline: none;
+        }
+
+        /* 3D & Animations */
+        .preserve-3d { transform-style: preserve-3d; }
         
-        .app-wrapper { width: 100%; max-width: 500px; height: 100%; background: white; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-
-        /* MODE SELECTION */
-        .mode-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: transform 0.4s; }
-        .mode-btn { background: white; color: var(--primary); width: 80%; padding: 20px; border-radius: 15px; margin: 10px; text-align: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .mode-btn:active { transform: scale(0.95); }
-
-        /* CLOUD UI */
-        .cloud-ui { display: none; height: 100%; flex-direction: column; }
-        .auth-container { display: flex; flex-direction: column; height: 100%; padding: 30px; justify-content: center; align-items: center; background: white; }
-        .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 25px; outline: none; background: #f9f9f9; }
-        .action-btn { width: 100%; padding: 12px; border: none; border-radius: 25px; background: var(--secondary); color: white; font-weight: bold; cursor: pointer; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
         
-        /* Dashboard Tabs */
-        .tab-screen { display: none; height: 100%; flex-direction: column; }
-        .tab-screen.active-screen { display: flex; }
-        .header-bar { padding: 15px; background: var(--primary); color: white; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .cloud-content { flex-grow: 1; overflow-y: auto; }
+        .floating-element { animation: float 6s ease-in-out infinite; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         
-        .chat-list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; cursor: pointer; }
-        .user-avatar { width: 50px; height: 50px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .msg-enter { animation: slideIn 0.3s ease-out forwards; }
 
-        /* Profile */
-        .profile-container { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .profile-pic-large { width: 120px; height: 120px; background: #ddd; border-radius: 50%; margin-bottom: 15px; overflow: hidden; position: relative; border: 3px solid var(--primary); }
-        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
-        .upload-btn { background: #333; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; cursor: pointer; margin-top: -10px; margin-bottom: 20px; z-index: 10; }
-        
-        /* Bottom Nav */
-        .bottom-nav { height: 60px; border-top: 1px solid #ddd; background: white; display: flex; justify-content: space-around; align-items: center; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--inactive-tab); font-size: 10px; cursor: pointer; padding: 5px; width: 33%; }
-        .nav-item.active { color: var(--active-tab); font-weight: bold; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
-        /* Chat Overlay */
-        .chat-screen { display: none; flex-direction: column; height: 100%; background: #e5ddd5; position: absolute; top: 0; left: 0; width: 100%; z-index: 100; }
-        .msg-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-break: break-word; }
-        .sent { align-self: flex-end; background: #dcf8c6; }
+        /* Utility */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #6366f1;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* P2P UI (Restored) */
-        .p2p-container { display: none; width: 100%; height: 100%; flex-direction: column; }
-        .p2p-sidebar { background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; border-bottom: 1px solid #ddd; }
-        .p2p-chat-area { flex-grow: 1; background: #e5ddd5; display: flex; flex-direction: column; }
-        #qrcode { background: white; padding: 10px; border-radius: 10px; align-self: center; margin-bottom: 10px; }
-
-        .loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 3000; }
+        /* Video Elements */
+        video { transform: scaleX(-1); border-radius: 12px; }
     </style>
 </head>
-<body>
 
-    <div class="loading" id="loader">Processing...</div>
+<body class="flex items-center justify-center p-0 md:p-6">
 
-    <div class="app-wrapper">
+    <!-- AUDIO ELEMENTS -->
+    <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <audio id="msg-sound" src="https://assets.mixkit.co/active_storage/sfx/2346/2346-preview.mp3"></audio>
+
+    <!-- MAIN APP CONTAINER (GLASS CARD) -->
+    <div class="relative w-full h-full md:h-[90vh] md:w-[1200px] glass-panel md:rounded-3xl flex overflow-hidden shadow-2xl">
         
-        <!-- MODE SELECTION -->
-        <div class="mode-screen" id="mode-screen">
-            <h2 style="margin-bottom:30px;">QR Send Ultimate</h2>
-            <div class="mode-btn" onclick="initMode('p2p')"><i class="fas fa-qrcode"></i><h3>Offline P2P</h3></div>
-            <div class="mode-btn" onclick="initMode('cloud')"><i class="fas fa-cloud"></i><h3>Cloud Account</h3></div>
-        </div>
-
-        <!-- P2P UI (Full Restore) -->
-        <div class="p2p-container" id="p2p-ui">
-            <div class="header-bar">
-                <i class="fas fa-arrow-left" onclick="goHome()" style="cursor:pointer;"></i>
-                <span>Offline P2P</span>
-                <span id="p2p-status" style="font-size:12px;background:rgba(255,255,255,0.2);padding:2px 5px;border-radius:5px;">Disconnected</span>
-            </div>
+        <!-- SIDEBAR (Users, QR, File Status) -->
+        <aside id="sidebar" class="absolute md:relative z-20 w-full md:w-80 h-full bg-slate-900/95 md:bg-transparent border-r border-white/10 flex flex-col transition-transform duration-300 transform -translate-x-full md:translate-x-0">
             
-            <div class="p2p-sidebar" id="p2p-connect">
-                <div id="qrcode"></div>
-                <div style="text-align:center;">
-                    <button class="action-btn" onclick="startScanner()" style="width:auto; padding:8px 20px;">Scan QR</button>
+            <!-- Sidebar Header -->
+            <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-bolt text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg tracking-wide">QR Send</h1>
+                        <p class="text-xs text-slate-400 font-mono">ULTIMATE PRO</p>
+                    </div>
                 </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
 
-            <div class="p2p-chat-area">
-                <div class="msg-list" id="p2p-messages"></div>
-                <div style="padding:10px; background:#f0f2f5; display:flex; gap:10px;">
-                    <button onclick="document.getElementById('p2p-file').click()" style="border:none; background:none; font-size:20px;">📎</button>
-                    <input type="file" id="p2p-file" style="display:none" onchange="sendP2PFile()">
-                    <input type="text" id="p2p-input" style="flex-grow:1; padding:10px; border-radius:20px; border:none;" placeholder="Message...">
-                    <button onclick="sendP2PText()" style="border:none; background:var(--primary); color:white; width:40px; height:40px; border-radius:50%;">➤</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- CLOUD UI -->
-        <div class="cloud-ui" id="cloud-ui">
-            <!-- Auth -->
-            <div class="auth-container" id="auth-screen">
-                <h2 style="color:var(--primary);margin-bottom:20px;">Cloud Login</h2>
-                <input type="text" id="c-user" class="auth-input" placeholder="Username">
-                <input type="password" id="c-pass" class="auth-input" placeholder="Password">
-                <button class="action-btn" onclick="handleCloudLogin()">Login</button>
-                <button class="action-btn" onclick="handleCloudSignup()" style="background:white; color:var(--primary); border:1px solid var(--primary); margin-top:10px;">Sign Up</button>
-                <p onclick="goHome()" style="margin-top:20px; color:#666; cursor:pointer;">← Back Home</p>
-            </div>
-
-            <!-- Dashboard -->
-            <div id="cloud-dash" style="display:none; height:100%; flex-direction:column;">
+            <!-- Connection Panel (QR) -->
+            <div id="connect-panel" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6 overflow-y-auto">
                 
-                <!-- Tab 1: Inbox -->
-                <div id="tab-inbox" class="tab-screen active-screen">
-                    <div class="header-bar">
-                        <i class="fas fa-arrow-left" onclick="goHome()" style="cursor:pointer; font-size:16px;"></i> 
-                        <span>Inbox</span>
-                        <i class="fas fa-sync" onclick="loadInboxUI()"></i>
-                    </div>
-                    <div class="cloud-content" id="inbox-list"></div>
-                </div>
-
-                <!-- Tab 2: Search -->
-                <div id="tab-search" class="tab-screen">
-                    <div class="header-bar">Search</div>
-                    <div style="padding:15px;">
-                        <input type="text" class="auth-input" placeholder="Search user..." oninput="searchCloudUser(this.value)">
-                        <div id="search-results"></div>
+                <!-- 3D QR Card -->
+                <div class="relative group" data-tilt data-tilt-max="15" data-tilt-speed="400" data-tilt-glare data-tilt-max-glare="0.2">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                    <div class="relative bg-white p-4 rounded-xl shadow-2xl">
+                        <div id="qrcode" class="opacity-90"></div>
                     </div>
                 </div>
 
-                <!-- Tab 3: Profile -->
-                <div id="tab-profile" class="tab-screen">
-                    <div class="header-bar">Profile</div>
-                    <div class="profile-container">
-                        <div class="profile-pic-large" id="my-profile-pic">
-                            <i class="fas fa-user" style="margin-top:35px; font-size:50px; color:#ccc;"></i>
+                <div class="text-center">
+                    <h3 class="text-white font-semibold mb-1">Scan to Connect</h3>
+                    <p class="text-xs text-slate-400">Point your camera at the QR code</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 w-full">
+                    <button onclick="shareQRCode()" class="glass-input py-3 rounded-lg hover:bg-white/10 text-sm font-medium transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-share-nodes"></i> Share
+                    </button>
+                    <button onclick="startScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg shadow-lg shadow-indigo-500/20 text-sm font-medium transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-camera"></i> Scan
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Transfer List (Active when connected) -->
+            <div id="files-panel" class="hidden flex-1 flex flex-col p-4 overflow-hidden">
+                <div class="flex justify-between items-center mb-4 px-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">File Queue</span>
+                    <button onclick="document.getElementById('file-input').click()" class="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-plus"></i> ADD
+                    </button>
+                </div>
+                
+                <input type="file" id="file-input" multiple class="hidden">
+                <div id="transfer-list" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                    <!-- Dynamic File Items go here -->
+                </div>
+            </div>
+
+            <!-- Connection Status Footer -->
+            <div class="p-4 border-t border-white/5 bg-slate-900/50">
+                <div class="flex items-center gap-3">
+                    <div id="status-indicator" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                    <span id="connection-status" class="text-sm font-medium text-slate-300">Disconnected</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CHAT AREA -->
+        <main class="flex-1 flex flex-col relative bg-slate-900/20">
+            
+            <!-- Chat Header -->
+            <header class="h-20 border-b border-white/5 flex justify-between items-center px-6 glass-panel z-10">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="md:hidden w-10 h-10 rounded-full glass-input flex items-center justify-center">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-slate-700 overflow-hidden border border-white/20">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Peer" alt="Avatar">
+                            </div>
+                            <div id="typing-indicator" class="hidden absolute -bottom-1 -right-1 w-4 h-4 bg-slate-800 rounded-full flex items-center justify-center border border-slate-600">
+                                <div class="loader w-2 h-2 border-2"></div>
+                            </div>
                         </div>
-                        <label class="upload-btn" for="pic-upload">Upload Photo</label>
-                        <input type="file" id="pic-upload" style="display:none" accept="image/*" onchange="uploadProfilePic()">
-                        
-                        <h3 id="display-username">@user</h3>
-                        
-                        <div style="width:100%; text-align:left; margin-top:20px; color:#666; font-size:12px;">Display Name</div>
-                        <input type="text" id="edit-name" class="auth-input" placeholder="Name">
-                        
-                        <button class="action-btn" onclick="saveProfile()">Save Changes</button>
-                        <button class="action-btn" onclick="cloudLogout()" style="background:#f8d7da; color:#721c24; margin-top:10px;">Log Out</button>
+                        <div>
+                            <h2 class="font-semibold text-white">Remote Peer</h2>
+                            <p class="text-xs text-emerald-400 flex items-center gap-1">
+                                <i class="fa-solid fa-shield-halved text-[10px]"></i> E2E Encrypted
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Nav -->
-                <div class="bottom-nav">
-                    <div class="nav-item active" onclick="switchTab('inbox', this)"><i class="fas fa-comment-alt"></i>Chats</div>
-                    <div class="nav-item" onclick="switchTab('search', this)"><i class="fas fa-search"></i>Search</div>
-                    <div class="nav-item" onclick="switchTab('profile', this)"><i class="fas fa-user-circle"></i>Profile</div>
+                <div class="flex items-center gap-2">
+                    <button id="sound-toggle" onclick="toggleSoundMode()" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition text-slate-300" title="Toggle Sound">
+                        <i class="fa-solid fa-bell"></i>
+                    </button>
+                    <div class="h-6 w-px bg-white/10 mx-2"></div>
+                    <button onclick="initCall(false)" class="w-10 h-10 rounded-full bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 flex items-center justify-center transition border border-emerald-500/30">
+                        <i class="fa-solid fa-phone"></i>
+                    </button>
+                    <button onclick="initCall(true)" class="w-10 h-10 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 flex items-center justify-center transition border border-indigo-500/30">
+                        <i class="fa-solid fa-video"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div id="messages" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+                <!-- Welcome Message -->
+                <div class="flex justify-center my-4">
+                    <span class="px-4 py-1 rounded-full bg-slate-800/50 text-xs text-slate-400 border border-white/5 backdrop-blur">
+                        Conversation Started
+                    </span>
                 </div>
             </div>
 
-            <!-- Cloud Chat Overlay -->
-            <div class="chat-screen" id="cloud-chat">
-                <div class="header-bar" style="background:#f0f2f5; color:#333;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-arrow-left" onclick="closeChat()" style="cursor:pointer;"></i>
-                        <div class="user-avatar" style="width:35px; height:35px;" id="chat-av-small"></div>
-                        <b id="chat-header-name">User</b>
+            <!-- Reply Context -->
+            <div id="reply-bar" class="hidden px-6 py-2 bg-slate-800/80 border-t border-white/5 backdrop-blur-sm flex justify-between items-center animate-pulse">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-1 h-8 bg-indigo-500 rounded-full"></div>
+                    <div>
+                        <p class="text-xs text-indigo-400 font-bold">Replying to</p>
+                        <p id="reply-text-preview" class="text-xs text-slate-300 truncate max-w-[200px]"></p>
                     </div>
                 </div>
-                <div id="c-msg-list" class="msg-list"></div>
-                <div style="padding:10px; background:#f0f2f5; display:flex; gap:10px;">
-                    <input type="text" id="c-input" style="flex-grow:1; padding:10px; border-radius:20px; border:none;" placeholder="Message...">
-                    <button onclick="sendCloudText()" style="border:none; background:var(--primary); color:white; width:40px; height:40px; border-radius:50%;">➤</button>
+                <button onclick="cancelReply()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 md:p-6 pb-6 md:pb-8">
+                <div class="glass-input rounded-2xl p-2 pl-4 flex items-center gap-2 shadow-lg">
+                    <button onclick="document.getElementById('img-input').click()" class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 transition flex items-center justify-center">
+                        <i class="fa-regular fa-image text-lg"></i>
+                    </button>
+                    <button onclick="document.getElementById('file-input').click()" class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 transition flex items-center justify-center md:hidden">
+                        <i class="fa-solid fa-paperclip text-lg"></i>
+                    </button>
+                    
+                    <input type="file" id="img-input" accept="image/*" class="hidden">
+                    
+                    <input type="text" id="msg-input" class="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 text-sm md:text-base h-10" placeholder="Type a message..." autocomplete="off">
+                    
+                    <button onclick="sendText()" class="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition transform active:scale-95 flex items-center justify-center">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
                 </div>
             </div>
-        </div>
 
+        </main>
     </div>
 
+    <!-- === OVERLAYS & MODALS === -->
+
     <!-- Scanner Overlay -->
-    <div id="scanner-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:black;display:none;flex-direction:column;">
-        <button onclick="stopScanner()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:white;font-size:30px;">✕</button>
-        <div id="qr-reader" style="flex-grow:1;"></div>
+    <div id="scanner-overlay" class="fixed inset-0 z-50 bg-black/95 hidden flex-col items-center justify-center p-6">
+        <button onclick="stopScanner()" class="absolute top-6 right-6 text-white text-2xl hover:text-red-500 transition"><i class="fa-solid fa-xmark"></i></button>
+        <div class="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
+            <div id="qr-reader" class="w-full h-full"></div>
+            <div class="absolute inset-0 pointer-events-none border-[40px] border-black/50"></div>
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div class="w-64 h-64 border-2 border-indigo-500 rounded-lg relative">
+                    <div class="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-indigo-500 -mt-1 -ml-1"></div>
+                    <div class="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-indigo-500 -mt-1 -mr-1"></div>
+                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-indigo-500 -mb-1 -ml-1"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-indigo-500 -mb-1 -mr-1"></div>
+                </div>
+            </div>
+        </div>
+        <p class="text-slate-400 mt-6 text-center font-light">Align the QR code within the frame</p>
+    </div>
+
+    <!-- Call Overlay (Incoming) -->
+    <div id="incoming-call-ui" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center">
+        <div class="text-center floating-element">
+            <div class="w-24 h-24 rounded-full bg-slate-800 border-4 border-indigo-500 mx-auto mb-6 overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.5)]">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Peer" class="w-full h-full object-cover">
+            </div>
+            <h2 id="incoming-call-type" class="text-2xl font-bold text-white mb-2">Incoming Video Call</h2>
+            <p class="text-indigo-400 animate-pulse">Peer is calling...</p>
+        </div>
+        <div class="flex gap-8 mt-12">
+            <button onclick="rejectCall()" class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white text-2xl shadow-lg shadow-red-500/40 transition transform hover:scale-110 flex items-center justify-center">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            <button onclick="answerCall()" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-2xl shadow-lg shadow-emerald-500/40 transition transform hover:scale-110 flex items-center justify-center">
+                <i class="fa-solid fa-phone"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Call UI -->
+    <div id="active-call-ui" class="fixed inset-0 z-50 bg-black hidden">
+        <video id="remote-video" autoplay playsinline class="w-full h-full object-cover"></video>
+        
+        <!-- Local Video (PiP) -->
+        <div class="absolute top-6 right-6 w-32 md:w-48 aspect-[3/4] bg-slate-800 rounded-xl overflow-hidden shadow-2xl border border-white/20" id="local-video-container">
+            <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        </div>
+
+        <!-- Controls -->
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10">
+            <button onclick="toggleMic()" id="btn-mute" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button onclick="endCall()" class="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/40 transition transform hover:scale-105 flex items-center justify-center">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            <button onclick="toggleCam()" id="btn-cam" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center">
+                <i class="fa-solid fa-video"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="img-modal" class="fixed inset-0 z-50 bg-black/95 hidden items-center justify-center p-4" onclick="if(event.target===this) closeModal()">
+        <button onclick="closeModal()" class="absolute top-6 right-6 text-white/50 hover:text-white text-3xl transition"><i class="fa-solid fa-xmark"></i></button>
+        <img id="modal-img" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl">
+        <a id="modal-dl" href="#" download class="absolute bottom-8 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full shadow-lg font-medium transition flex items-center gap-2">
+            <i class="fa-solid fa-download"></i> Download High-Res
+        </a>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur text-white px-6 py-3 rounded-full shadow-2xl border border-white/10 translate-y-[-150%] transition-transform duration-300 z-[100] flex items-center gap-3">
+        <i class="fa-solid fa-circle-info text-indigo-400"></i>
+        <span id="toast-msg">Notification</span>
     </div>
 
     <script>
-        // --- CONFIG ---
-        const API_URL = "https://script.google.com/macros/s/AKfycbzNJzNxHm1G7gPURcn2dDGYtMw_p4X_QEXFXpXz3tq_ZbpUFNbTeRDg2UMkS3UWNhdfow/exec"; 
+        // --- 3D TILT INIT ---
+        VanillaTilt.init(document.querySelectorAll("[data-tilt]"));
 
-        // --- STATE ---
-        let mode = '';
-        let currentUser = localStorage.getItem('qr_user');
-        let currentName = localStorage.getItem('qr_name');
-        let currentPic = localStorage.getItem('qr_pic');
-        let activePartner = null;
-        let pollTimer = null;
-        
-        // P2P Vars
-        let peer, conn, myId, qrScanner;
+        // --- CORE VARIABLES ---
+        let peer, conn, myId, isHost;
+        let activeCall = null, localStream = null;
+        let replyContext = null;
+        let fileQueue = [], activeTransfer = null, isTransferring = false;
+        let receiving = {};
+        let typingTimeout;
+        let callMode = 'ring';
+        let vibrateInterval;
+        let qrScanner;
 
-        // --- NAVIGATION ---
-        function goHome() {
-            document.getElementById('mode-screen').style.display = 'flex';
-            document.getElementById('p2p-ui').style.display = 'none';
-            document.getElementById('cloud-ui').style.display = 'none';
-            if(peer) { peer.destroy(); peer = null; }
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            
+            // Input Listeners
+            const msgInput = document.getElementById('msg-input');
+            msgInput.addEventListener('input', () => {
+                if (conn && conn.open) {
+                    conn.send({ type: 'typing', isTyping: true });
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(() => {
+                        if (conn && conn.open) conn.send({ type: 'typing', isTyping: false });
+                    }, 1000);
+                }
+            });
+            msgInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendText();
+            });
+
+            // Image Upload
+            document.getElementById('img-input').addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const msgId = Date.now();
+                    const base64 = e.target.result;
+                    if (conn && conn.open) conn.send({ type: 'image', content: base64, id: msgId });
+                    addImage(base64, 'sent', msgId);
+                };
+                reader.readAsDataURL(file);
+                this.value = '';
+            });
+
+            // Drag Local Video
+            dragElement(document.getElementById("local-video-container"));
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.style.transform = "translateX(-50%) translateY(0)";
+            setTimeout(() => {
+                toast.style.transform = "translateX(-50%) translateY(-150%)";
+            }, 3000);
         }
 
-        function initMode(m) {
-            mode = m;
-            document.getElementById('mode-screen').style.display = 'none';
-            if(m === 'p2p') {
-                document.getElementById('p2p-ui').style.display = 'flex';
-                initP2P();
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.bg-black/50'); // You might want to add a backdrop div
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
             } else {
-                document.getElementById('cloud-ui').style.display = 'flex';
-                if(currentUser) initDash();
-                else document.getElementById('auth-screen').style.display = 'flex';
+                sidebar.classList.add('-translate-x-full');
             }
         }
 
-        function switchTab(tab, el) {
-            document.querySelectorAll('.tab-screen').forEach(t => t.classList.remove('active-screen'));
-            document.getElementById('tab-' + tab).classList.add('active-screen');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-            if(tab === 'profile') loadProfileUI();
-            if(tab === 'inbox') loadInboxUI();
-        }
-
-        // --- CLOUD LOGIC ---
-        async function handleCloudLogin() {
-            const u = document.getElementById('c-user').value.trim();
-            const p = document.getElementById('c-pass').value.trim();
-            showLoader(true);
-            const res = await api({ action: 'login', username: u, password: p });
-            showLoader(false);
-            if(res.status === 'success') {
-                saveSession(res);
-                document.getElementById('auth-screen').style.display = 'none';
-                initDash();
-            } else alert(res.message);
-        }
-
-        async function handleCloudSignup() {
-            const u = document.getElementById('c-user').value.trim();
-            const p = document.getElementById('c-pass').value.trim();
-            showLoader(true);
-            const res = await api({ action: 'signup', username: u, password: p });
-            showLoader(false);
-            if(res.status === 'success') alert("Created! Login now.");
-            else alert(res.message);
-        }
-
-        function saveSession(data) {
-            currentUser = data.username;
-            currentName = data.name;
-            currentPic = data.profilePic;
-            localStorage.setItem('qr_user', currentUser);
-            localStorage.setItem('qr_name', currentName);
-            localStorage.setItem('qr_pic', currentPic);
-        }
-
-        function initDash() {
-            document.getElementById('cloud-dash').style.display = 'flex';
-            loadInboxUI();
-        }
-
-        function cloudLogout() {
-            if(confirm("Log Out?")) {
-                localStorage.clear();
-                location.reload();
+        function toggleSoundMode() {
+            const btn = document.getElementById('sound-toggle');
+            const icon = btn.querySelector('i');
+            if (callMode === 'ring') {
+                callMode = 'vibrate';
+                icon.className = 'fa-solid fa-mobile-screen-button';
+                showToast("Mode: Vibrate");
+            } else if (callMode === 'vibrate') {
+                callMode = 'silent';
+                icon.className = 'fa-solid fa-bell-slash';
+                showToast("Mode: Silent");
+            } else {
+                callMode = 'ring';
+                icon.className = 'fa-solid fa-bell';
+                showToast("Mode: Ring");
             }
         }
 
-        // --- PROFILE UPLOAD ---
-        function loadProfileUI() {
-            document.getElementById('display-username').innerText = "@" + currentUser;
-            document.getElementById('edit-name').value = currentName || "";
-            if(currentPic) document.getElementById('my-profile-pic').innerHTML = `<img src="${currentPic}">`;
-        }
-
-        async function uploadProfilePic() {
-            const file = document.getElementById('pic-upload').files[0];
-            if(!file) return;
-            
-            showLoader(true);
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64 = e.target.result.split(',')[1];
-                const res = await api({
-                    action: 'uploadFile',
-                    fileData: base64,
-                    fileName: 'profile_' + currentUser + '.jpg',
-                    mimeType: file.type
-                });
-                
-                if(res.status === 'success') {
-                    // Update profile with new URL
-                    await api({ action: 'updateProfile', username: currentUser, profilePic: res.fileUrl });
-                    currentPic = res.fileUrl;
-                    localStorage.setItem('qr_pic', currentPic);
-                    loadProfileUI();
-                    alert("Photo Uploaded!");
-                } else {
-                    alert("Upload Failed: " + res.message);
-                }
-                showLoader(false);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function saveProfile() {
-            const name = document.getElementById('edit-name').value;
-            showLoader(true);
-            await api({ action: 'updateProfile', username: currentUser, name: name });
-            currentName = name;
-            localStorage.setItem('qr_name', name);
-            showLoader(false);
-            alert("Saved");
-        }
-
-        // --- MESSAGING ---
-        async function loadInboxUI() {
-            const res = await api({ action: 'getMessages', username: currentUser });
-            const list = document.getElementById('inbox-list');
-            list.innerHTML = '';
-            
-            if(res.status === 'success') {
-                const partners = {};
-                res.data.forEach(m => {
-                    const p = m.sender === currentUser ? m.receiver : m.sender;
-                    partners[p] = true;
-                });
-                
-                Object.keys(partners).forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = 'chat-list-item';
-                    div.innerHTML = `<div class="user-avatar">${p[0].toUpperCase()}</div><div><b>${p}</b></div>`;
-                    div.onclick = () => openChat(p);
-                    list.appendChild(div);
-                });
-                
-                if(list.children.length === 0) list.innerHTML = "<div style='padding:20px;text-align:center;color:#999'>No messages</div>";
-            }
-        }
-
-        async function searchCloudUser(q) {
-            const box = document.getElementById('search-results');
-            if(q.length < 2) { box.innerHTML=''; return; }
-            const res = await api({ action: 'search', query: q });
-            box.innerHTML = '';
-            if(res.status === 'success') {
-                res.data.forEach(u => {
-                    if(u.username === currentUser) return;
-                    const div = document.createElement('div');
-                    div.className = 'chat-list-item';
-                    div.innerHTML = `<div class="user-avatar">${u.profilePic ? `<img src="${u.profilePic}">` : u.name[0]}</div><div>${u.name} (@${u.username})</div>`;
-                    div.onclick = () => openChat(u.username, u.name, u.profilePic);
-                    box.appendChild(div);
-                });
-            }
-        }
-
-        function openChat(username, name, pic) {
-            activePartner = username;
-            document.getElementById('cloud-chat').style.display = 'flex';
-            document.getElementById('chat-header-name').innerText = name || username;
-            document.getElementById('chat-av-small').innerHTML = pic ? `<img src="${pic}">` : (name ? name[0] : username[0]);
-            
-            loadChatMsgs();
-            pollTimer = setInterval(loadChatMsgs, 3000);
-        }
-
-        function closeChat() {
-            clearInterval(pollTimer);
-            document.getElementById('cloud-chat').style.display = 'none';
-            activePartner = null;
-        }
-
-        async function sendCloudText() {
-            const txt = document.getElementById('c-input').value;
-            if(!txt) return;
-            const enc = CryptoJS.AES.encrypt(txt, 'SECRET').toString();
-            document.getElementById('c-input').value = '';
-            appendMsg(txt, 'sent', 'c-msg-list');
-            await api({ action: 'sendMessage', sender: currentUser, receiver: activePartner, content: enc, type: 'text' });
-        }
-
-        async function loadChatMsgs() {
-            if(!activePartner) return;
-            const res = await api({ action: 'getMessages', username: currentUser });
-            const box = document.getElementById('c-msg-list');
-            const relevant = res.data.filter(m => (m.sender===currentUser && m.receiver===activePartner) || (m.sender===activePartner && m.receiver===currentUser));
-            
-            if(box.childElementCount !== relevant.length) {
-                box.innerHTML = '';
-                relevant.slice(-20).forEach(m => {
-                    try {
-                        const dec = CryptoJS.AES.decrypt(m.content, 'SECRET').toString(CryptoJS.enc.Utf8);
-                        appendMsg(dec, m.sender===currentUser ? 'sent' : 'received', 'c-msg-list');
-                    } catch(e) { appendMsg("Encrypted", 'received', 'c-msg-list'); }
-                });
-                box.scrollTop = box.scrollHeight;
-            }
-        }
-
-        // --- P2P LOGIC (RESTORED) ---
-        function initP2P() {
-            if(peer) return;
+        // --- PEERJS LOGIC ---
+        function initApp() {
             const hash = window.location.hash.substring(1);
-            const isHost = !hash;
-            peer = new Peer(undefined, { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
-            
-            peer.on('open', id => {
+            isHost = !hash;
+
+            const peerConfig = {
+                debug: 1,
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            };
+
+            peer = new Peer(undefined, peerConfig);
+
+            peer.on('open', (id) => {
                 myId = id;
-                if(isHost) new QRCode(document.getElementById('qrcode'), { text: window.location.href + '#' + id, width: 128, height: 128 });
-                else {
-                    document.getElementById('p2p-connect').style.display = 'none';
-                    document.getElementById('p2p-status').innerText = "Connecting...";
-                    conn = peer.connect(hash);
-                    setupConn();
+                if (isHost) {
+                    const qrEl = document.getElementById('qrcode');
+                    qrEl.innerHTML = ""; // clear
+                    new QRCode(qrEl, { 
+                        text: window.location.href + '#' + id, 
+                        width: 160, 
+                        height: 160,
+                        colorDark : "#0f172a",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                } else {
+                    document.getElementById('connect-panel').classList.add('hidden');
+                    document.getElementById('files-panel').classList.remove('hidden'); // Show files immediately on client
+                    updateStatus('Connecting...', 'yellow');
+                    connectToPeer(hash);
                 }
             });
-            peer.on('connection', c => { conn = c; setupConn(); });
-            peer.on('error', e => alert("P2P Error: " + e));
+
+            peer.on('connection', (c) => setupConnection(c));
+            peer.on('call', (call) => {
+                document.getElementById('incoming-call-ui').style.display = 'flex';
+                document.getElementById('incoming-call-type').innerText = call.metadata?.type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call';
+                window.pendingCall = call;
+                playCallAlert();
+            });
+            peer.on('error', (err) => {
+                console.error(err);
+                showToast("Connection Error. Retrying...");
+                if (!isHost) setTimeout(() => window.location.reload(), 2000);
+            });
         }
 
-        function setupConn() {
+        function connectToPeer(id) {
+            setTimeout(() => {
+                setupConnection(peer.connect(id, { reliable: true }));
+            }, 1000);
+        }
+
+        function setupConnection(c) {
+            conn = c;
             conn.on('open', () => {
-                document.getElementById('p2p-connect').style.display = 'none';
-                document.getElementById('p2p-status').innerText = "Connected";
+                updateStatus('Connected', 'emerald');
+                document.getElementById('connect-panel').classList.add('hidden');
+                document.getElementById('files-panel').classList.remove('hidden');
+                document.getElementById('files-panel').classList.add('flex');
+                
+                showToast("Secure Connection Established");
+                
+                // On mobile, auto close sidebar on connect
+                if(window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
             });
-            conn.on('data', d => {
-                if(d.type === 'text') appendMsg(d.content, 'received', 'p2p-messages');
-            });
+            conn.on('data', handleData);
+            conn.on('close', () => { showToast('Peer Disconnected'); setTimeout(() => window.location.reload(), 2000); });
         }
 
-        function sendP2PText() {
-            const val = document.getElementById('p2p-input').value;
-            if(!conn || !val) return;
-            conn.send({type:'text', content:val});
-            appendMsg(val, 'sent', 'p2p-messages');
-            document.getElementById('p2p-input').value = '';
+        function updateStatus(text, color) {
+            const badge = document.getElementById('status-indicator');
+            const txt = document.getElementById('connection-status');
+            txt.innerText = text;
+            badge.className = `w-2 h-2 rounded-full bg-${color}-500 shadow-[0_0_10px_rgba(var(--color-${color}-500),0.5)]`;
+            
+            // Manual color fix for Tailwind dynamic classes
+            if(color === 'yellow') badge.style.backgroundColor = '#eab308';
+            if(color === 'emerald') badge.style.backgroundColor = '#10b981';
         }
 
-        function appendMsg(txt, type, containerId) {
+        function handleData(data) {
+            switch (data.type) {
+                case 'text': 
+                    addMessage(data.content, 'received', data.reply); 
+                    playMsgSound();
+                    break;
+                case 'image': 
+                    addImage(data.content, 'received', data.id); 
+                    playMsgSound();
+                    break;
+                case 'typing':
+                    document.getElementById('typing-indicator').classList.toggle('hidden', !data.isTyping);
+                    break;
+                case 'file-meta': startReceivingFile(data); break;
+                case 'file-chunk': processFileChunk(data); break;
+                case 'file-cancel': handleFileCancel(data.fileId); break;
+                case 'call-rejected': 
+                    showToast('Call Declined'); 
+                    endCallUI(); 
+                    break;
+                case 'call-end': endCallUI(); break;
+            }
+        }
+
+        // --- CHAT FUNCTIONS ---
+        function sendText() {
+            const input = document.getElementById('msg-input');
+            const val = input.value.trim();
+            if (!val) return;
+            if (!conn || !conn.open) { showToast("Not connected!"); return; }
+            
+            const id = Date.now();
+            conn.send({ type: 'text', content: val, id: id, reply: replyContext });
+            addMessage(val, 'sent', replyContext, id);
+            input.value = '';
+            cancelReply();
+        }
+
+        function addMessage(text, type, reply, id) {
+            const container = document.getElementById('messages');
             const div = document.createElement('div');
-            div.className = `msg-bubble ${type}`;
-            div.innerText = txt;
-            document.getElementById(containerId).appendChild(div);
+            div.className = `flex w-full ${type === 'sent' ? 'justify-end' : 'justify-start'} msg-enter`;
+            
+            const isSent = type === 'sent';
+            
+            // 3D Bubble Effect
+            const bubbleClass = isSent 
+                ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-lg shadow-indigo-500/20' 
+                : 'bg-slate-700 text-slate-100 rounded-2xl rounded-tl-sm shadow-lg border border-white/5';
+
+            let replyHtml = '';
+            if (reply) {
+                replyHtml = `
+                <div class="mb-2 p-2 rounded bg-black/20 border-l-2 border-white/30 text-xs opacity-80">
+                    ${reply.text.substring(0, 40)}...
+                </div>`;
+            }
+
+            div.innerHTML = `
+                <div class="max-w-[75%] md:max-w-[60%] group relative">
+                    <div class="p-3 md:p-4 ${bubbleClass} cursor-pointer" onclick="setReply('${text.replace(/'/g, "\\'")}')">
+                        ${replyHtml}
+                        <p class="text-sm md:text-base leading-relaxed break-words">${text}</p>
+                        <div class="flex items-center justify-end gap-1 mt-1 opacity-60">
+                            <span class="text-[10px]">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            ${isSent ? '<i class="fa-solid fa-check-double text-[10px]"></i>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addImage(src, type, id) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `flex w-full ${type === 'sent' ? 'justify-end' : 'justify-start'} msg-enter`;
+            
+            div.innerHTML = `
+                <div class="max-w-[70%] bg-slate-800 p-1 rounded-2xl border border-white/10 shadow-xl cursor-pointer transition hover:scale-[1.02]" onclick="openModal('${src}', '${type}', ${id})">
+                    <img src="${src}" class="rounded-xl max-h-60 object-cover w-full">
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function setReply(text) {
+            replyContext = { text: text };
+            document.getElementById('reply-bar').classList.remove('hidden');
+            document.getElementById('reply-bar').classList.add('flex');
+            document.getElementById('reply-text-preview').innerText = text;
+            document.getElementById('msg-input').focus();
+        }
+
+        function cancelReply() {
+            replyContext = null;
+            document.getElementById('reply-bar').classList.add('hidden');
+            document.getElementById('reply-bar').classList.remove('flex');
+        }
+
+        function playMsgSound() {
+            const audio = document.getElementById('msg-sound');
+            audio.currentTime = 0;
+            audio.play().catch(e=>{});
+        }
+
+        // --- FILE TRANSFER ---
+        document.getElementById('file-input').onchange = function () {
+            for (let f of this.files) {
+                const id = Date.now() + Math.random().toString(36).substr(2, 5);
+                fileQueue.push({ file: f, id: id });
+                createFileUI(id, f.name, 'Sending', f.size);
+            }
+            processFileQueue(); 
+            this.value = '';
+        };
+
+        function createFileUI(id, name, type, size) {
+            const div = document.createElement('div');
+            div.id = `file-${id}`;
+            div.className = 'bg-slate-800/80 p-3 rounded-lg border border-white/5 relative overflow-hidden group';
+            
+            const icon = type === 'Sending' ? 'fa-arrow-up text-indigo-400' : 'fa-arrow-down text-emerald-400';
+            const sizeStr = (size / (1024*1024)).toFixed(2) + ' MB';
+
+            div.innerHTML = `
+                <div class="flex justify-between items-start z-10 relative">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm text-white truncate font-medium w-32">${name}</p>
+                            <p class="text-xs text-slate-500">${sizeStr} • <span id="status-${id}" class="text-slate-300">Waiting</span></p>
+                        </div>
+                    </div>
+                    <button onclick="cancelTransfer('${id}', '${type}')" class="text-slate-600 hover:text-red-400 transition"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <!-- Progress Bar -->
+                <div class="absolute bottom-0 left-0 h-1 bg-slate-700 w-full">
+                    <div id="bar-${id}" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-300"></div>
+                </div>
+            `;
+            document.getElementById('transfer-list').prepend(div);
+        }
+
+        function processFileQueue() {
+            if (isTransferring || fileQueue.length === 0) return;
+            if (!conn || !conn.open) return;
+
+            const item = fileQueue.shift();
+            activeTransfer = item; isTransferring = true;
+            
+            conn.send({ type: 'file-meta', fileId: item.id, name: item.file.name, size: item.file.size });
+
+            const reader = new FileReader();
+            let offset = 0; let start = Date.now();
+            
+            reader.onload = (e) => {
+                if (!activeTransfer) return;
+                if (conn && conn.open) {
+                    conn.send({ type: 'file-chunk', fileId: item.id, data: e.target.result });
+                    offset += e.target.result.byteLength;
+                    updateFileProgress(item.id, offset, item.file.size);
+                    
+                    if (offset < item.file.size) {
+                        // High speed chunking
+                        setTimeout(readNext, 0); 
+                    } else { 
+                        isTransferring = false; 
+                        document.getElementById(`status-${item.id}`).innerText = "Sent";
+                        document.getElementById(`status-${item.id}`).className = "text-emerald-400 font-bold";
+                        setTimeout(processFileQueue, 100); 
+                    }
+                } else {
+                    isTransferring = false;
+                }
+            };
+            const readNext = () => reader.readAsArrayBuffer(item.file.slice(offset, offset + 16384));
+            readNext();
+        }
+
+        function startReceivingFile(meta) {
+            receiving[meta.fileId] = { name: meta.name, size: meta.size, received: 0, buffer: [] };
+            createFileUI(meta.fileId, meta.name, 'Receiving', meta.size);
+            document.getElementById(`status-${meta.fileId}`).innerText = "Receiving...";
+            
+            // Auto open sidebar if receiving
+            if(window.innerWidth >= 768) {
+               // document.getElementById('sidebar').classList.remove('-translate-x-full');
+            }
+        }
+
+        function processFileChunk(data) {
+            const f = receiving[data.fileId];
+            if (!f) return;
+            f.buffer.push(data.data); 
+            f.received += data.data.byteLength;
+            updateFileProgress(data.fileId, f.received, f.size);
+            
+            if (f.received >= f.size) {
+                const blob = new Blob(f.buffer);
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = f.name;
+                
+                // Auto Download
+                link.click();
+                
+                delete receiving[data.fileId];
+                const status = document.getElementById(`status-${data.fileId}`);
+                status.innerText = "Downloaded";
+                status.className = "text-emerald-400 font-bold";
+            }
+        }
+
+        function updateFileProgress(id, cur, tot) {
+            const pct = Math.round((cur / tot) * 100);
+            const bar = document.getElementById(`bar-${id}`);
+            if (bar) bar.style.width = pct + '%';
+        }
+
+        function cancelTransfer(id, type) {
+            const el = document.getElementById(`file-${id}`);
+            if(el) el.remove();
+            if (conn && conn.open) conn.send({ type: 'file-cancel', fileId: id });
+            if (type === 'Sending') {
+                if (activeTransfer?.id === id) { activeTransfer = null; isTransferring = false; processFileQueue(); }
+            } else delete receiving[id];
+        }
+
+        function handleFileCancel(id) {
+            const el = document.getElementById(`file-${id}`);
+            if (el) {
+                el.innerHTML = '<div class="p-2 text-red-400 text-xs font-bold text-center bg-red-900/20">Transfer Cancelled by Peer</div>';
+                setTimeout(() => el.remove(), 2000);
+            }
+            delete receiving[id];
+        }
+
+
+        // --- CALL & MEDIA LOGIC ---
+        function playCallAlert() {
+            if (callMode === 'silent') return;
+            if (callMode === 'ring') {
+                const audio = document.getElementById('ringtone');
+                audio.currentTime = 0;
+                audio.play().catch(e => {});
+            }
+            if (navigator.vibrate && (callMode === 'ring' || callMode === 'vibrate')) {
+                vibrateInterval = setInterval(() => navigator.vibrate([500, 200, 500]), 1500);
+            }
+        }
+
+        function stopCallAlert() {
+            const audio = document.getElementById('ringtone');
+            audio.pause();
+            audio.currentTime = 0;
+            if (vibrateInterval) clearInterval(vibrateInterval);
+            navigator.vibrate(0);
+        }
+
+        // Permissions & Call Start
+        function initCall(vid) {
+            navigator.mediaDevices.getUserMedia({ video: vid, audio: true })
+                .then(stream => {
+                    localStream = stream;
+                    document.getElementById('active-call-ui').style.display = 'block';
+                    document.getElementById('local-video').srcObject = stream;
+                    
+                    const call = peer.call(conn.peer, stream, { metadata: { type: vid ? 'video' : 'audio' } });
+                    setupCallEvents(call);
+                })
+                .catch(err => {
+                    showToast("Microphone/Camera Permission Denied");
+                });
+        }
+
+        function answerCall() {
+            stopCallAlert();
+            document.getElementById('incoming-call-ui').style.display = 'none';
+            const vid = window.pendingCall.metadata.type === 'video';
+            
+            navigator.mediaDevices.getUserMedia({ video: vid, audio: true })
+                .then(stream => {
+                    localStream = stream;
+                    document.getElementById('active-call-ui').style.display = 'block';
+                    document.getElementById('local-video').srcObject = stream;
+                    
+                    window.pendingCall.answer(stream);
+                    setupCallEvents(window.pendingCall);
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast("Error accessing media devices");
+                });
+        }
+
+        function setupCallEvents(call) {
+            activeCall = call;
+            call.on('stream', r => { document.getElementById('remote-video').srcObject = r; });
+            call.on('close', endCallUI);
+        }
+
+        function endCall() {
+            if (conn && conn.open) conn.send({ type: 'call-end' });
+            if (activeCall) activeCall.close();
+            endCallUI();
+        }
+
+        function rejectCall() {
+            stopCallAlert();
+            if (conn && conn.open) conn.send({ type: 'call-rejected' });
+            document.getElementById('incoming-call-ui').style.display = 'none';
+            window.pendingCall = null;
+        }
+
+        function endCallUI() {
+            stopCallAlert();
+            document.getElementById('active-call-ui').style.display = 'none';
+            document.getElementById('incoming-call-ui').style.display = 'none';
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            activeCall = null;
+            window.pendingCall = null;
+        }
+
+        function toggleMic() { 
+            const t = localStream.getAudioTracks()[0]; 
+            t.enabled = !t.enabled; 
+            document.getElementById('btn-mute').classList.toggle('bg-red-500');
+            document.getElementById('btn-mute').classList.toggle('text-white');
+        }
+        
+        function toggleCam() { 
+            const t = localStream.getVideoTracks()[0]; 
+            if(t) {
+                t.enabled = !t.enabled; 
+                document.getElementById('btn-cam').classList.toggle('bg-red-500');
+            }
+        }
+
+        // --- UTILS ---
+        function shareQRCode() {
+            const canvas = document.querySelector('#qrcode canvas');
+            if(canvas) {
+                canvas.toBlob(blob => {
+                    const file = new File([blob], "qr_connect.png", { type: "image/png" });
+                    if (navigator.share) navigator.share({ files: [file], url: window.location.href + '#' + myId });
+                    else showToast("Browser sharing not supported");
+                });
+            } else {
+                showToast("Generate QR first!");
+            }
         }
 
         function startScanner() {
             document.getElementById('scanner-overlay').style.display = 'flex';
             qrScanner = new Html5Qrcode("qr-reader");
-            qrScanner.start({facingMode:"environment"}, {fps:10}, t => {
-                if(t) { window.location.hash = t.split('#')[1] || t; window.location.reload(); }
+            qrScanner.start({ facingMode: "environment" }, { fps: 30, qrbox: 250 }, t => {
+                stopScanner();
+                const id = t.includes('#') ? t.split('#')[1] : t;
+                if(id) { window.location.hash = id; window.location.reload(); }
+            }).catch(err => {
+                stopScanner();
+                showToast("Camera Error");
             });
         }
-        function stopScanner() { if(qrScanner) qrScanner.stop(); document.getElementById('scanner-overlay').style.display='none'; }
 
-        // --- API UTILS ---
-        async function api(data) {
-            try {
-                const req = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: { "Content-Type": "text/plain;charset=utf-8" }
-                });
-                return await req.json();
-            } catch(e) { return { status: 'error', message: e.toString() }; }
+        function stopScanner() {
+            if(qrScanner) { qrScanner.stop().then(() => { qrScanner.clear(); document.getElementById('scanner-overlay').style.display = 'none'; }); }
+            else document.getElementById('scanner-overlay').style.display = 'none';
         }
-        function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
+
+        function openModal(src, type, id) {
+            document.getElementById('img-modal').style.display = 'flex';
+            document.getElementById('modal-img').src = src;
+            document.getElementById('modal-dl').href = src;
+        }
+        function closeModal() { document.getElementById('img-modal').style.display = 'none'; }
+
+        // Make Video Draggable
+        function dragElement(elmnt) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            elmnt.onmousedown = dragMouseDown;
+            elmnt.ontouchstart = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                // e.preventDefault(); // allow touch
+                pos3 = e.clientX || e.touches[0].clientX;
+                pos4 = e.clientY || e.touches[0].clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+                document.ontouchend = closeDragElement;
+                document.ontouchmove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                // e.preventDefault();
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                
+                pos1 = pos3 - clientX;
+                pos2 = pos4 - clientY;
+                pos3 = clientX;
+                pos4 = clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+                document.ontouchend = null;
+                document.ontouchmove = null;
+            }
+        }
     </script>
 </body>
 </html>
