@@ -13,377 +13,365 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root { --primary: #075e54; --secondary: #128c7e; --bg: #e5ddd5; --white: #fff; --blue: #3b5998; --red: #d32f2f; --green: #25d366; }
+        :root { --primary: #075e54; --secondary: #128c7e; --bg: #e5ddd5; --white: #fff; --gray: #f0f2f5; --active-tab: #075e54; --inactive-tab: #999; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; -webkit-tap-highlight-color:transparent; }
         body { background: var(--bg); height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
         
-        .app-wrapper { width: 100%; max-width: 1000px; height: 100%; background: white; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .app-wrapper { width: 100%; max-width: 500px; height: 100%; background: white; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
 
-        /* MODE SCREEN */
-        .mode-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: transform 0.4s; }
-        .mode-btn { background: white; color: var(--primary); width: 80%; max-width: 300px; padding: 20px; border-radius: 15px; margin: 10px; text-align: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.2s; }
-        .mode-btn:active { transform: scale(0.95); }
-        .mode-btn i { font-size: 30px; margin-bottom: 10px; display: block; }
-
-        /* CLOUD UI ELEMENTS */
+        /* --- CLOUD DASHBOARD LAYOUT --- */
         .cloud-ui { display: none; height: 100%; flex-direction: column; }
-        .auth-container { display: flex; flex-direction: column; height: 100%; padding: 30px; justify-content: center; background: #fff; align-items: center; }
-        .auth-box { width: 100%; max-width: 350px; }
+        .cloud-content { flex-grow: 1; overflow-y: auto; position: relative; }
+        
+        /* Bottom Navigation */
+        .bottom-nav { height: 60px; border-top: 1px solid #ddd; background: white; display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--inactive-tab); font-size: 10px; cursor: pointer; padding: 5px; width: 33%; }
+        .nav-item i { font-size: 20px; margin-bottom: 3px; }
+        .nav-item.active { color: var(--active-tab); font-weight: bold; }
+
+        /* TAB 1: INBOX */
+        .tab-screen { display: none; height: 100%; flex-direction: column; }
+        .tab-screen.active-screen { display: flex; }
+        
+        .header-bar { padding: 15px; background: var(--primary); color: white; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        
+        .chat-list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s; }
+        .chat-list-item:hover { background: #f9f9f9; }
+        .user-avatar { width: 50px; height: 50px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #555; overflow: hidden; object-fit: cover; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* TAB 2: SEARCH */
+        .search-container { padding: 15px; }
+        .search-box { width: 100%; padding: 12px 15px; border-radius: 25px; border: 1px solid #ddd; background: var(--gray); outline: none; margin-bottom: 15px; }
+        .search-result-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        
+        /* TAB 3: PROFILE */
+        .profile-container { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .profile-pic-large { width: 100px; height: 100px; background: #ddd; border-radius: 50%; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #666; overflow: hidden; position: relative; }
+        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-label { align-self: flex-start; font-size: 12px; color: #666; margin-top: 15px; margin-bottom: 5px; }
+        .profile-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        .save-btn { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; font-weight: bold; }
+        .logout-btn { width: 100%; padding: 12px; background: #f8d7da; color: #721c24; border: none; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
+
+        /* --- AUTH & P2P & CHAT (Same as before) --- */
+        .auth-container { display: flex; flex-direction: column; height: 100%; padding: 30px; justify-content: center; align-items: center; }
         .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 25px; outline: none; background: #f9f9f9; }
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 25px; background: var(--secondary); color: white; font-weight: bold; cursor: pointer; }
         
-        .dashboard, .chat-screen { display: none; flex-direction: column; height: 100%; }
-        .dash-header { padding: 15px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
-        .inbox { flex-grow: 1; overflow-y: auto; }
-        .chat-item { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; gap: 15px; cursor: pointer; }
-        .avatar { width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .chat-screen { display: none; flex-direction: column; height: 100%; background: #e5ddd5; position: absolute; top: 0; left: 0; width: 100%; z-index: 100; }
+        .msg-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .sent { align-self: flex-end; background: #dcf8c6; }
+        .input-zone { padding: 10px; background: #f0f2f5; display: flex; gap: 10px; align-items: center; }
         
-        .msg-list { flex-grow: 1; overflow-y: auto; padding: 15px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; display: flex; flex-direction: column; gap: 8px; }
-        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14px; position: relative; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg-bubble.sent { align-self: flex-end; background: var(--light); }
-        
-        /* P2P UI ELEMENTS (Restored) */
-        .p2p-container { display: none; width: 100%; height: 100%; }
-        .sidebar { width: 300px; background: #f0f2f5; border-right: 1px solid #ddd; display: flex; flex-direction: column; transition: transform 0.3s; z-index: 100; }
-        .p2p-chat-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; background: #e5ddd5; }
-        
-        @media (max-width: 768px) {
-            .p2p-container { flex-direction: column; }
-            .sidebar { position: absolute; width: 100%; height: 100%; top: 0; left: 0; transform: translateX(0); }
-            .sidebar.hidden { transform: translateX(-100%); }
-            .mobile-only { display: block !important; }
-        }
-
-        /* Common Elements */
         .loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 3000; }
-        .video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 2500; display: none; flex-direction: column; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; bottom: 20px; right: 20px; width: 100px; height: 140px; background: #333; border: 2px solid white; border-radius: 10px; object-fit: cover; }
         
-        .magic-btn-small { padding: 8px; border-radius: 8px; background: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .magic-btn-small::before { content: ""; position: absolute; inset: -2px; background: linear-gradient(45deg, red, blue, green); z-index: -1; filter: blur(5px); opacity: 0.5; border-radius: 10px; }
-        
-        .btn-control { width: 50px; height: 50px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 20px; cursor: pointer; margin: 0 10px; }
+        /* MODE SELECTION */
+        .mode-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .mode-btn { background: white; color: var(--primary); width: 80%; padding: 20px; border-radius: 15px; margin: 10px; text-align: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
     <div class="loading" id="loader">Processing...</div>
 
     <div class="app-wrapper">
         
         <!-- MODE SELECTION -->
         <div class="mode-screen" id="mode-screen">
-            <h2 style="margin-bottom:30px;">Select Mode</h2>
-            <div class="mode-btn" onclick="initP2PMode()">
-                <i class="fas fa-qrcode"></i>
-                <h3>Offline P2P</h3>
-                <p>Local Network & QR</p>
-            </div>
-            <div class="mode-btn" onclick="initCloudMode()">
-                <i class="fas fa-cloud"></i>
-                <h3>Cloud Account</h3>
-                <p>Internet Database</p>
-            </div>
+            <h2 style="margin-bottom:30px;">QR Send Ultimate</h2>
+            <div class="mode-btn" onclick="initMode('p2p')"><i class="fas fa-qrcode"></i><h3>Offline P2P</h3></div>
+            <div class="mode-btn" onclick="initMode('cloud')"><i class="fas fa-cloud"></i><h3>Cloud Account</h3></div>
         </div>
 
-        <!-- P2P UI -->
-        <div class="p2p-container" id="p2p-ui">
-            <!-- Sidebar -->
-            <div class="sidebar" id="p2p-sidebar">
-                <div class="dash-header">
-                    <button onclick="toggleP2PSidebar()" style="background:none;border:none;color:white;font-size:20px;" class="mobile-only">←</button>
-                    <h3>QR Send</h3>
-                    <span id="p2p-status" style="font-size:12px;background:rgba(255,255,255,0.2);padding:2px 5px;border-radius:5px;">Disconnected</span>
+        <!-- CLOUD AUTH -->
+        <div class="auth-container" id="auth-ui" style="display:none;">
+            <h2 style="color:var(--primary);margin-bottom:20px;">Welcome</h2>
+            <input type="text" id="c-user" class="auth-input" placeholder="Username">
+            <input type="password" id="c-pass" class="auth-input" placeholder="Password">
+            <button class="action-btn" onclick="handleCloudLogin()">Login</button>
+            <button class="action-btn" onclick="handleCloudSignup()" style="background:white; color:var(--primary); border:1px solid var(--primary); margin-top:10px;">Sign Up</button>
+            <p onclick="location.reload()" style="margin-top:20px; color:#666; cursor:pointer;">Back</p>
+        </div>
+
+        <!-- CLOUD DASHBOARD -->
+        <div class="cloud-ui" id="cloud-dash">
+            <!-- 1. INBOX TAB -->
+            <div id="tab-inbox" class="tab-screen active-screen">
+                <div class="header-bar">QR Send <i class="fas fa-sync" style="font-size:14px; cursor:pointer;" onclick="loadMessages()"></i></div>
+                <div class="cloud-content" id="inbox-list">
+                    <div style="padding:20px; text-align:center; color:#999;">Loading Chats...</div>
                 </div>
-                <div style="padding:20px; text-align:center; overflow-y:auto; flex-grow:1;" id="connect-panel">
-                    <div id="qrcode" style="background:white;padding:10px;border-radius:10px;display:inline-block;margin-bottom:10px;"></div>
-                    <p style="color:#666;font-size:12px;">Scan to connect</p>
-                    <button class="action-btn" onclick="startScanner()" style="margin-top:10px;">Scan QR</button>
+            </div>
+
+            <!-- 2. SEARCH TAB -->
+            <div id="tab-search" class="tab-screen">
+                <div class="header-bar">Search Users</div>
+                <div class="search-container">
+                    <input type="text" class="search-box" placeholder="Search by name or username..." oninput="searchCloudUser(this.value)">
+                    <div id="search-results"></div>
                 </div>
-                <div style="padding:15px; background:white; border-top:1px solid #ddd;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <b>Files</b>
-                        <button class="magic-btn-small" onclick="document.getElementById('file-input').click()">📂 Add</button>
+            </div>
+
+            <!-- 3. PROFILE TAB -->
+            <div id="tab-profile" class="tab-screen">
+                <div class="header-bar">My Profile</div>
+                <div class="profile-container">
+                    <div class="profile-pic-large" id="my-profile-pic">
+                        <i class="fas fa-user"></i>
                     </div>
-                    <input type="file" id="file-input" multiple style="display:none">
-                    <div id="transfer-list" style="max-height:150px; overflow-y:auto;"></div>
+                    <h3 id="display-username">@username</h3>
+                    
+                    <div class="profile-label">Display Name</div>
+                    <input type="text" id="edit-name" class="profile-input" placeholder="Your Name">
+                    
+                    <div class="profile-label">Profile Picture URL</div>
+                    <input type="text" id="edit-pic" class="profile-input" placeholder="https://example.com/photo.jpg">
+                    
+                    <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+                    <button class="logout-btn" onclick="cloudLogout()">Log Out</button>
                 </div>
             </div>
 
-            <!-- Chat Area -->
-            <div class="p2p-chat-area">
-                <div class="dash-header" style="background:#f0f2f5; color:#333; border-bottom:1px solid #ddd;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <button onclick="toggleP2PSidebar()" style="border:none;background:none;font-size:20px;" class="mobile-only">📁</button>
-                        <b>Peer</b>
-                    </div>
-                    <div>
-                        <button onclick="initCall(false)" style="border:none;background:none;font-size:20px;color:var(--primary);">📞</button>
-                        <button onclick="initCall(true)" style="border:none;background:none;font-size:20px;color:var(--primary);margin-left:10px;">📹</button>
-                    </div>
+            <!-- BOTTOM NAVIGATION -->
+            <div class="bottom-nav">
+                <div class="nav-item active" onclick="switchTab('inbox', this)">
+                    <i class="fas fa-comment-alt"></i> Chats
                 </div>
-                
-                <div id="p2p-messages" class="msg-list"></div>
-                
-                <div style="padding:10px; background:#f0f2f5; display:flex; gap:10px;">
-                    <input type="text" id="p2p-input" style="flex-grow:1; padding:10px; border-radius:20px; border:none;" placeholder="Message...">
-                    <button onclick="sendP2PText()" style="border:none; background:var(--primary); color:white; width:40px; height:40px; border-radius:50%;">➤</button>
+                <div class="nav-item" onclick="switchTab('search', this)">
+                    <i class="fas fa-search"></i> Search
                 </div>
-            </div>
-        </div>
-
-        <!-- CLOUD UI -->
-        <div class="cloud-ui" id="cloud-ui">
-            <!-- Auth -->
-            <div class="auth-container" id="auth-screen">
-                <div class="auth-box">
-                    <h2 style="text-align:center;color:var(--primary);margin-bottom:20px;">Welcome</h2>
-                    <input type="text" id="c-user" class="auth-input" placeholder="Username">
-                    <input type="password" id="c-pass" class="auth-input" placeholder="Password">
-                    <button class="action-btn" onclick="handleCloudLogin()">Login</button>
-                    <button class="action-btn" onclick="handleCloudSignup()" style="background:white; color:var(--primary); border:1px solid var(--primary); margin-top:10px;">Create Account</button>
-                    <p onclick="goHome()" style="text-align:center; margin-top:20px; color:#666; cursor:pointer;">← Back</p>
-                </div>
-            </div>
-
-            <!-- Dashboard -->
-            <div class="dashboard" id="dash-screen">
-                <div class="dash-header">
-                    <h3>Inbox</h3>
-                    <i class="fas fa-sign-out-alt" onclick="cloudLogout()" style="cursor:pointer"></i>
-                </div>
-                <div style="padding:10px; border-bottom:1px solid #eee;">
-                    <input type="text" oninput="searchCloudUser(this.value)" placeholder="Search user..." style="width:100%; padding:8px; border-radius:15px; border:1px solid #ddd;">
-                    <div id="search-results" style="background:white; position:absolute; width:90%; border:1px solid #ddd; display:none;"></div>
-                </div>
-                <div class="inbox" id="inbox-list"></div>
-            </div>
-
-            <!-- Chat -->
-            <div class="chat-screen" id="cloud-chat">
-                <div class="dash-header" style="background:#f0f2f5; color:#333; border-bottom:1px solid #ddd;">
-                    <i class="fas fa-arrow-left" onclick="closeCloudChat()"></i>
-                    <b id="c-chat-name">User</b>
-                    <i class="fas fa-trash" onclick="clearCloudChat()" style="color:red;"></i>
-                </div>
-                <div id="c-msg-list" class="msg-list"></div>
-                <div style="padding:10px; background:#f0f2f5; display:flex; gap:10px;">
-                    <input type="text" id="c-input" style="flex-grow:1; padding:10px; border-radius:20px; border:none;" placeholder="Secure message...">
-                    <button onclick="sendCloudText()" style="border:none; background:var(--primary); color:white; width:40px; height:40px; border-radius:50%;">➤</button>
+                <div class="nav-item" onclick="switchTab('profile', this)">
+                    <i class="fas fa-user-circle"></i> Profile
                 </div>
             </div>
         </div>
 
-    </div>
-
-    <!-- OVERLAYS -->
-    <div class="video-overlay" id="video-ui">
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay playsinline muted></video>
-        <div style="position:absolute; bottom:20px; width:100%; display:flex; justify-content:center;">
-            <button class="btn-control" onclick="endCall()" style="background:red;">📞</button>
+        <!-- CHAT SCREEN (Overlay) -->
+        <div class="chat-screen" id="cloud-chat">
+            <div class="header-bar" style="background:#f0f2f5; color:#333; padding:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-arrow-left" onclick="closeChat()" style="cursor:pointer;"></i>
+                    <div class="user-avatar" style="width:35px; height:35px;" id="chat-av-small">?</div>
+                    <b id="chat-header-name">User</b>
+                </div>
+            </div>
+            <div id="c-msg-list" class="msg-list"></div>
+            <div class="input-zone">
+                <input type="text" id="c-input" style="flex-grow:1; padding:10px; border-radius:20px; border:none; outline:none;" placeholder="Message...">
+                <button onclick="sendCloudText()" style="border:none; background:var(--primary); color:white; width:40px; height:40px; border-radius:50%;">➤</button>
+            </div>
         </div>
-    </div>
 
-    <div id="scanner-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:black;display:none;flex-direction:column;">
-        <button onclick="stopScanner()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:white;font-size:30px;">✕</button>
-        <div id="qr-reader" style="flex-grow:1;"></div>
+        <!-- P2P PLACEHOLDER -->
+        <div id="p2p-ui" style="display:none; height:100%; flex-direction:column; align-items:center; justify-content:center;">
+            <h2>Offline Mode</h2>
+            <p>Use previous P2P code here.</p>
+            <button onclick="location.reload()" class="action-btn" style="width:auto; padding:10px 30px; margin-top:20px;">Back</button>
+        </div>
+
     </div>
 
     <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: Paste your NEW deployed script URL here
         const API_URL = "https://script.google.com/macros/s/AKfycbzNJzNxHm1G7gPURcn2dDGYtMw_p4X_QEXFXpXz3tq_ZbpUFNbTeRDg2UMkS3UWNhdfow/exec"; 
 
-        // --- GLOBAL STATE ---
-        let mode = '';
-        let currentUser = localStorage.getItem('qr_cloud_user');
+        // --- STATE ---
+        let currentUser = localStorage.getItem('qr_user');
+        let currentName = localStorage.getItem('qr_name') || currentUser;
+        let currentPic = localStorage.getItem('qr_pic') || "";
+        
         let activePartner = null;
         let pollTimer = null;
 
-        // P2P State
-        let peer, conn, myId;
-        let localStream, activeCall;
-        let qrScanner;
-
-        // --- NAVIGATION ---
-        function goHome() {
-            document.getElementById('mode-screen').style.display = 'flex';
-            document.getElementById('p2p-ui').style.display = 'none';
-            document.getElementById('cloud-ui').style.display = 'none';
-        }
-
-        function initP2PMode() {
-            mode = 'p2p';
+        // --- INIT ---
+        function initMode(mode) {
             document.getElementById('mode-screen').style.display = 'none';
-            document.getElementById('p2p-ui').style.display = 'flex';
-            initPeer();
-        }
-
-        function initCloudMode() {
-            mode = 'cloud';
-            document.getElementById('mode-screen').style.display = 'none';
-            document.getElementById('cloud-ui').style.display = 'flex';
-            if(currentUser) {
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('dash-screen').style.display = 'flex';
-                loadInbox();
+            if (mode === 'p2p') {
+                document.getElementById('p2p-ui').style.display = 'flex';
             } else {
-                document.getElementById('auth-screen').style.display = 'flex';
-                document.getElementById('dash-screen').style.display = 'none';
+                if (currentUser) {
+                    initDash();
+                } else {
+                    document.getElementById('auth-ui').style.display = 'flex';
+                }
             }
         }
 
-        // --- P2P LOGIC (RESTORED) ---
-        function initPeer() {
-            if(peer) return; // Already init
-            const hash = window.location.hash.substring(1);
-            const isHost = !hash;
+        // --- UI LOGIC ---
+        function switchTab(tabName, el) {
+            document.querySelectorAll('.tab-screen').forEach(t => t.classList.remove('active-screen'));
+            document.getElementById('tab-' + tabName).classList.add('active-screen');
             
-            peer = new Peer(undefined, { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
-            
-            peer.on('open', id => {
-                myId = id;
-                if(isHost) {
-                    new QRCode(document.getElementById('qrcode'), { text: window.location.href + '#' + id, width: 150, height: 150 });
-                } else {
-                    document.getElementById('connect-panel').style.display = 'none';
-                    document.getElementById('p2p-status').innerText = "Connecting...";
-                    setTimeout(() => {
-                        conn = peer.connect(hash, { reliable: true });
-                        setupConn();
-                    }, 1000);
-                    // If mobile, auto hide sidebar
-                    if(window.innerWidth < 768) document.getElementById('p2p-sidebar').classList.add('hidden');
-                }
-            });
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
 
-            peer.on('connection', c => {
-                conn = c;
-                setupConn();
-            });
-
-            peer.on('call', call => {
-                if(confirm("Incoming Call. Accept?")) {
-                    navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(s => {
-                        localStream = s;
-                        document.getElementById('video-ui').style.display = 'flex';
-                        document.getElementById('local-video').srcObject = s;
-                        call.answer(s);
-                        call.on('stream', r => document.getElementById('remote-video').srcObject = r);
-                        activeCall = call;
-                    });
-                }
-            });
+            if(tabName === 'profile') loadProfileUI();
+            if(tabName === 'inbox') loadInboxUI();
         }
 
-        function setupConn() {
-            conn.on('open', () => {
-                document.getElementById('p2p-status').innerText = "Connected";
-                document.getElementById('p2p-status').style.background = "var(--green)";
-                document.getElementById('connect-panel').style.display = 'none';
-            });
-            conn.on('data', data => {
-                if(data.type === 'text') appendP2PMsg(data.content, 'received');
-            });
-        }
-
-        function sendP2PText() {
-            const val = document.getElementById('p2p-input').value;
-            if(!val || !conn) return;
-            conn.send({type:'text', content:val});
-            appendP2PMsg(val, 'sent');
-            document.getElementById('p2p-input').value = '';
-        }
-
-        function appendP2PMsg(txt, type) {
-            const div = document.createElement('div');
-            div.className = `msg-bubble ${type}`;
-            div.innerText = txt;
-            document.getElementById('p2p-messages').appendChild(div);
-        }
-
-        function toggleP2PSidebar() {
-            const sb = document.getElementById('p2p-sidebar');
-            sb.classList.toggle('hidden');
-            if(sb.classList.contains('hidden')) sb.style.transform = 'translateX(-100%)';
-            else sb.style.transform = 'translateX(0)';
-        }
-
-        // --- CLOUD LOGIC (FIXED) ---
-        async function handleCloudSignup() {
-            const u = document.getElementById('c-user').value.trim();
-            const p = document.getElementById('c-pass').value.trim();
-            if(!u || !p) return alert("Fill inputs");
-            
-            showLoader(true);
-            const res = await api({ action: 'signup', username: u, password: p });
-            showLoader(false);
-            
-            if(res.status === 'success') alert("Account Created! Login now.");
-            else alert(res.message);
-        }
-
+        // --- AUTH ---
         async function handleCloudLogin() {
             const u = document.getElementById('c-user').value.trim();
             const p = document.getElementById('c-pass').value.trim();
-            
             showLoader(true);
             const res = await api({ action: 'login', username: u, password: p });
             showLoader(false);
             
-            if(res.status === 'success') {
-                currentUser = res.username; // Use returned normalized username
-                localStorage.setItem('qr_cloud_user', currentUser);
-                initCloudMode();
+            if (res.status === 'success') {
+                saveUserSession(res);
+                document.getElementById('auth-ui').style.display = 'none';
+                initDash();
             } else {
                 alert(res.message);
             }
         }
 
+        async function handleCloudSignup() {
+            const u = document.getElementById('c-user').value.trim();
+            const p = document.getElementById('c-pass').value.trim();
+            showLoader(true);
+            const res = await api({ action: 'signup', username: u, password: p });
+            showLoader(false);
+            if(res.status === 'success') alert("Account Created! Please Login.");
+            else alert(res.message);
+        }
+
+        function saveUserSession(data) {
+            currentUser = data.username;
+            currentName = data.name;
+            currentPic = data.profilePic;
+            localStorage.setItem('qr_user', currentUser);
+            localStorage.setItem('qr_name', currentName);
+            localStorage.setItem('qr_pic', currentPic);
+        }
+
+        function cloudLogout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function initDash() {
+            document.getElementById('cloud-dash').style.display = 'flex';
+            loadInboxUI();
+        }
+
+        // --- PROFILE ---
+        function loadProfileUI() {
+            document.getElementById('display-username').innerText = "@" + currentUser;
+            document.getElementById('edit-name').value = currentName;
+            document.getElementById('edit-pic').value = currentPic;
+            if(currentPic) {
+                document.getElementById('my-profile-pic').innerHTML = `<img src="${currentPic}">`;
+            }
+        }
+
+        async function saveProfile() {
+            const newName = document.getElementById('edit-name').value;
+            const newPic = document.getElementById('edit-pic').value;
+            
+            showLoader(true);
+            const res = await api({ action: 'updateProfile', username: currentUser, name: newName, profilePic: newPic });
+            showLoader(false);
+            
+            if(res.status === 'success') {
+                currentName = newName;
+                currentPic = newPic;
+                localStorage.setItem('qr_name', currentName);
+                localStorage.setItem('qr_pic', currentPic);
+                alert("Profile Updated");
+                loadProfileUI();
+            }
+        }
+
+        // --- SEARCH ---
         async function searchCloudUser(q) {
             const box = document.getElementById('search-results');
-            if(q.length < 2) { box.style.display='none'; return; }
+            if (q.length < 2) { box.innerHTML=''; return; }
             
             const res = await api({ action: 'search', query: q });
             box.innerHTML = '';
-            box.style.display = 'block';
             
-            res.data.forEach(u => {
-                if(u === currentUser) return;
-                const div = document.createElement('div');
-                div.style.padding = '10px';
-                div.innerText = u;
-                div.style.borderBottom = '1px solid #eee';
-                div.onclick = () => openCloudChat(u);
-                box.appendChild(div);
-            });
+            if (res.status === 'success') {
+                res.data.forEach(u => {
+                    if (u.username === currentUser) return;
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    div.innerHTML = `
+                        <div class="user-avatar">
+                            ${u.profilePic ? `<img src="${u.profilePic}">` : u.name[0]}
+                        </div>
+                        <div>
+                            <b>${u.name}</b><br>
+                            <span style="font-size:12px;color:#666">@${u.username}</span>
+                        </div>
+                    `;
+                    div.onclick = () => openChat(u.username, u.name, u.profilePic);
+                    box.appendChild(div);
+                });
+            }
         }
 
-        function openCloudChat(partner) {
-            activePartner = partner;
-            document.getElementById('dash-screen').style.display = 'none';
+        // --- MESSAGING ---
+        async function loadInboxUI() {
+            // Fetch all messages to build inbox list locally (MVP approach)
+            const res = await api({ action: 'getMessages', username: currentUser });
+            const list = document.getElementById('inbox-list');
+            list.innerHTML = '';
+
+            if (res.status === 'success') {
+                const msgs = res.data;
+                const partners = {};
+                
+                // Group by partner
+                msgs.forEach(m => {
+                    const partner = m.sender === currentUser ? m.receiver : m.sender;
+                    if(!partners[partner]) partners[partner] = m; // Store latest msg logic can be improved
+                });
+
+                if(Object.keys(partners).length === 0) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No messages yet.</div>';
+                    return;
+                }
+
+                Object.keys(partners).forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'chat-list-item';
+                    div.innerHTML = `
+                        <div class="user-avatar">${p[0].toUpperCase()}</div>
+                        <div><b>${p}</b><br><span style="font-size:12px;color:#666">Click to chat</span></div>
+                    `;
+                    div.onclick = () => openChat(p, p, ""); // Pass name/pic if stored
+                    list.appendChild(div);
+                });
+            }
+        }
+
+        function openChat(username, name, pic) {
+            activePartner = username;
             document.getElementById('cloud-chat').style.display = 'flex';
-            document.getElementById('c-chat-name').innerText = partner;
-            loadCloudMsgs();
-            pollTimer = setInterval(loadCloudMsgs, 3000);
+            document.getElementById('chat-header-name').innerText = name || username;
+            document.getElementById('chat-av-small').innerHTML = pic ? `<img src="${pic}">` : (name ? name[0] : "?");
+            
+            loadChatMsgs();
+            pollTimer = setInterval(loadChatMsgs, 3000);
         }
 
-        function closeCloudChat() {
+        function closeChat() {
             clearInterval(pollTimer);
             document.getElementById('cloud-chat').style.display = 'none';
-            document.getElementById('dash-screen').style.display = 'flex';
+            activePartner = null;
         }
 
         async function sendCloudText() {
-            const val = document.getElementById('c-input').value;
-            if(!val) return;
+            const txt = document.getElementById('c-input').value;
+            if(!txt) return;
             
-            const encrypted = CryptoJS.AES.encrypt(val, 'SECRET').toString();
+            // Simple Encrypt
+            const encrypted = CryptoJS.AES.encrypt(txt, 'SECRET').toString();
             document.getElementById('c-input').value = '';
-            appendCloudMsg(val, 'sent');
+            renderMsg(txt, 'sent');
             
             await api({
                 action: 'sendMessage',
@@ -394,7 +382,8 @@
             });
         }
 
-        async function loadCloudMsgs() {
+        async function loadChatMsgs() {
+            if(!activePartner) return;
             const res = await api({ action: 'getMessages', username: currentUser });
             const box = document.getElementById('c-msg-list');
             
@@ -406,37 +395,19 @@
             if(box.childElementCount !== relevant.length) {
                 box.innerHTML = '';
                 relevant.slice(-20).forEach(m => {
-                    try {
-                        const dec = CryptoJS.AES.decrypt(m.content, 'SECRET').toString(CryptoJS.enc.Utf8);
-                        appendCloudMsg(dec, m.sender === currentUser ? 'sent' : 'received');
-                    } catch(e) { appendCloudMsg("Encrypted", 'received'); }
+                    let dec = "Locked";
+                    try { dec = CryptoJS.AES.decrypt(m.content, 'SECRET').toString(CryptoJS.enc.Utf8); } catch(e){}
+                    renderMsg(dec, m.sender === currentUser ? 'sent' : 'received');
                 });
+                box.scrollTop = box.scrollHeight;
             }
         }
 
-        function appendCloudMsg(txt, type) {
+        function renderMsg(txt, type) {
             const div = document.createElement('div');
             div.className = `msg-bubble ${type}`;
             div.innerText = txt;
             document.getElementById('c-msg-list').appendChild(div);
-        }
-
-        async function clearCloudChat() {
-            if(confirm("Delete server messages?")) {
-                await api({ action: 'deleteMessages', username: currentUser });
-                document.getElementById('c-msg-list').innerHTML = '';
-            }
-        }
-
-        function cloudLogout() {
-            localStorage.removeItem('qr_cloud_user');
-            currentUser = null;
-            initCloudMode();
-        }
-
-        function loadInbox() {
-            // Simplified inbox: Just a placeholder or fetch logic
-            document.getElementById('inbox-list').innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Search a user to start chatting</div>';
         }
 
         async function api(data) {
@@ -444,27 +415,13 @@
                 const req = await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify(data),
-                    // Important for Apps Script:
                     headers: { "Content-Type": "text/plain;charset=utf-8" }
                 });
                 return await req.json();
-            } catch(e) {
-                console.error(e);
-                return { status: 'error', message: 'Connection Error' };
-            }
+            } catch(e) { return { status: 'error', message: e.toString() }; }
         }
 
         function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
-
-        // Scanner Stub
-        function startScanner() {
-            document.getElementById('scanner-overlay').style.display = 'flex';
-            qrScanner = new Html5Qrcode("qr-reader");
-            qrScanner.start({facingMode:"environment"}, {fps:10}, t => {
-                if(t) { window.location.hash = t.split('#')[1] || t; window.location.reload(); }
-            });
-        }
-        function stopScanner() { if(qrScanner) qrScanner.stop(); document.getElementById('scanner-overlay').style.display='none'; }
     </script>
 </body>
 </html>
