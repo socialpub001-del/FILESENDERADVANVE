@@ -188,7 +188,7 @@
 
     <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT URL HERE
+        // IMPORTANT: Ensure this URL is correct and deployed as "Anyone"
         const API_URL = "https://script.google.com/macros/s/AKfycbzNJzNxHm1G7gPURcn2dDGYtMw_p4X_QEXFXpXz3tq_ZbpUFNbTeRDg2UMkS3UWNhdfow/exec"; 
 
         // --- STATE ---
@@ -205,7 +205,7 @@
         function openP2P() {
             document.getElementById('mode-screen').style.display = 'none';
             document.getElementById('p2p-ui').style.display = 'flex';
-            // Init P2P Logic Here
+            // Init P2P Logic Here (Add P2P init function if needed)
         }
 
         function openCloud() {
@@ -229,25 +229,30 @@
             const p = document.getElementById('s-pass').value.trim();
             if(!u || !p) return alert("Fill all fields");
             
+            console.log("Signup started for:", u);
             showLoading(true);
             const res = await callApi({ action: 'signup', username: u, password: p });
             showLoading(false);
+            console.log("Signup response:", res);
             
             if(res.status === 'success') {
                 alert("Account created! Please Login.");
                 toggleAuth('login');
             } else {
-                alert(res.message);
+                alert("Signup Failed: " + (res.message || "Unknown Error"));
             }
         }
 
         async function handleLogin() {
             const u = document.getElementById('l-user').value.trim();
             const p = document.getElementById('l-pass').value.trim();
-            
+            if(!u || !p) return alert("Fill all fields");
+
+            console.log("Login started for:", u);
             showLoading(true);
             const res = await callApi({ action: 'login', username: u, password: p });
             showLoading(false);
+            console.log("Login response:", res);
             
             if(res.status === 'success') {
                 currentUser = u;
@@ -256,7 +261,7 @@
                 document.getElementById('dash-ui').style.display = 'flex';
                 loadInbox();
             } else {
-                alert(res.message);
+                alert("Login Failed: " + (res.message || "Invalid Credentials"));
             }
         }
 
@@ -271,19 +276,22 @@
             const box = document.getElementById('search-res');
             if(query.length < 2) { box.style.display = 'none'; return; }
             
+            console.log("Searching for:", query);
             const res = await callApi({ action: 'search', query: query });
             box.innerHTML = '';
             box.style.display = 'block';
             
-            res.data.forEach(u => {
-                if(u === currentUser) return;
-                const div = document.createElement('div');
-                div.style.padding = '10px';
-                div.style.borderBottom = '1px solid #eee';
-                div.innerHTML = `<i class="fas fa-user"></i> ${u}`;
-                div.onclick = () => startChat(u);
-                box.appendChild(div);
-            });
+            if(res.status === 'success' && res.data) {
+                res.data.forEach(u => {
+                    if(u === currentUser) return;
+                    const div = document.createElement('div');
+                    div.style.padding = '10px';
+                    div.style.borderBottom = '1px solid #eee';
+                    div.innerHTML = `<i class="fas fa-user"></i> ${u}`;
+                    div.onclick = () => startChat(u);
+                    box.appendChild(div);
+                });
+            }
         }
 
         function startChat(partner) {
@@ -309,13 +317,13 @@
             const txt = inp.value.trim();
             if(!txt) return;
             
-            // Client-side Encryption (Pseudo-RAM Security)
+            // Client-side Encryption
             const encrypted = CryptoJS.AES.encrypt(txt, 'SECRET_KEY_123').toString();
             
-            // Optimistic UI Update
             appendMsg(txt, 'sent');
             inp.value = '';
 
+            console.log("Sending message to:", activePartner);
             await callApi({
                 action: 'sendMessage',
                 sender: currentUser,
@@ -328,35 +336,33 @@
         async function loadMessages() {
             if(!activePartner) return;
             
-            // In a real app, send 'since_timestamp' to get only new msgs
             const res = await callApi({ action: 'getMessages', username: currentUser });
             
-            const box = document.getElementById('msg-box');
-            // Simple filter for current chat partner
-            const chatMsgs = res.data.filter(m => 
-                (m.sender === currentUser && m.receiver === activePartner) || 
-                (m.sender === activePartner && m.receiver === currentUser)
-            );
-            
-            // Only update if count changes (basic diffing)
-            if(box.children.length !== chatMsgs.length) {
-                box.innerHTML = ''; // Clear and redraw (inefficient but works for MVP)
+            if(res.status === 'success' && res.data) {
+                const box = document.getElementById('msg-box');
+                const chatMsgs = res.data.filter(m => 
+                    (m.sender === currentUser && m.receiver === activePartner) || 
+                    (m.sender === activePartner && m.receiver === currentUser)
+                );
                 
-                // RAM Management: Slice last 20
-                const msgsToShow = chatMsgs.slice(-20);
-                
-                msgsToShow.forEach(m => {
-                    let content = "Error";
-                    try {
-                        const bytes = CryptoJS.AES.decrypt(m.content, 'SECRET_KEY_123');
-                        content = bytes.toString(CryptoJS.enc.Utf8);
-                    } catch(e) { content = "Encrypted Message"; }
+                // Simple Diffing: If count changed, re-render
+                if(box.children.length !== chatMsgs.length) {
+                    box.innerHTML = ''; 
+                    
+                    // RAM Limit: Last 20 messages
+                    const msgsToShow = chatMsgs.slice(-20);
+                    
+                    msgsToShow.forEach(m => {
+                        let content = "Error";
+                        try {
+                            const bytes = CryptoJS.AES.decrypt(m.content, 'SECRET_KEY_123');
+                            content = bytes.toString(CryptoJS.enc.Utf8);
+                        } catch(e) { content = "Encrypted Message"; }
 
-                    const type = m.sender === currentUser ? 'sent' : 'received';
-                    appendMsg(content, type);
-                });
-                
-                // Auto delete logic would go here (call deleteMessages API)
+                        const type = m.sender === currentUser ? 'sent' : 'received';
+                        appendMsg(content, type);
+                    });
+                }
             }
         }
 
@@ -377,30 +383,50 @@
         }
 
         function loadInbox() {
-            // In MVP, we deduce inbox from messages or local history
-            // For now, static placeholder
             const list = document.getElementById('inbox-list');
             if(list.children.length === 0) {
                 list.innerHTML = `<div style="padding:20px; text-align:center; color:#999;">Search a user to start chatting</div>`;
             }
         }
 
-        // --- API HELPER ---
+        // --- IMPROVED API HANDLER WITH CORS FIX ---
         async function callApi(data) {
+            console.log("Calling API with:", data);
+            
             if(!API_URL) {
-                console.error("API URL MISSING");
-                return { status: 'error', message: 'API URL not configured in code.' };
+                console.error("API URL Not Found");
+                return { status: 'error', message: 'Config Error: API URL Missing' };
             }
+
             try {
-                // Use CORS proxy or no-cors if needed, but Apps Script Web App "Anyone" access usually works with JSONP or POST
+                // Using 'text/plain' and 'no-cors' logic workaround for GAS
+                // Standard fetch to GAS Web App follows redirects automatically.
                 const response = await fetch(API_URL, {
                     method: 'POST',
+                    redirect: 'follow',
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8",
+                    },
                     body: JSON.stringify(data)
                 });
-                return await response.json();
+
+                const text = await response.text();
+                console.log("Raw Response:", text);
+
+                try {
+                    return JSON.parse(text);
+                } catch(e) {
+                    console.error("JSON Parse Fail:", e);
+                    // Sometimes GAS returns HTML error page (e.g. 404 or Auth)
+                    if(text.includes("Google Drive") || text.includes("script")) {
+                        return { status: 'error', message: 'Script Deployment Error. Check "Who has access" = Anyone' };
+                    }
+                    return { status: 'error', message: 'Invalid Response from Server' };
+                }
+
             } catch(e) {
-                console.error(e);
-                return { status: 'error', message: 'Network Error' };
+                console.error("Network Error:", e);
+                return { status: 'error', message: 'Network Connection Failed' };
             }
         }
 
