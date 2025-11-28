@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR Send - Ultimate 3D</title>
+    <title>QR Send - Ultimate Fast</title>
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,74 +19,86 @@
         body {
             font-family: 'Outfit', sans-serif;
             background-color: #0f172a;
+            /* Lighter gradient for better performance */
             background-image: 
                 radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
                 radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
                 radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
             background-attachment: fixed;
-            height: 100dvh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+            width: 100vw;
             overflow: hidden;
             color: #e2e8f0;
         }
 
-        /* Glassmorphism Classes */
+        /* Responsive Glassmorphism */
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            background: rgba(15, 23, 42, 0.95); /* Solid for mobile default */
+            border: none;
+        }
+
+        /* Desktop only blur to save mobile battery/performance */
+        @media (min-width: 768px) {
+            .glass-panel {
+                background: rgba(30, 41, 59, 0.7);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            }
         }
 
         .glass-input {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .glass-input:focus {
             border-color: #6366f1;
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+            background: rgba(255, 255, 255, 0.1);
             outline: none;
         }
 
-        /* 3D & Animations */
-        .preserve-3d { transform-style: preserve-3d; }
-        
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
+        /* Sidebar Transition */
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
         }
-        
-        .floating-element { animation: float 6s ease-in-out infinite; }
 
+        /* FIX: QR Code Responsive Scaling */
+        #qrcode img, #qrcode canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        /* Animations */
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
-        .msg-enter { animation: slideIn 0.3s ease-out forwards; }
+        .msg-enter { animation: slideIn 0.2s ease-out forwards; }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
-
-        /* Utility */
-        .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            border-top: 3px solid #6366f1;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Video Elements */
-        video { transform: scaleX(-1); border-radius: 12px; }
+        video { transform: scaleX(-1); border-radius: 12px; background: #000; }
+        
+        /* Mobile Overlay for Sidebar */
+        #sidebar-overlay {
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 
@@ -96,156 +108,145 @@
     <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
     <audio id="msg-sound" src="https://assets.mixkit.co/active_storage/sfx/2346/2346-preview.mp3"></audio>
 
-    <!-- MAIN APP CONTAINER (GLASS CARD) -->
+    <!-- MOBILE SIDEBAR OVERLAY -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden opacity-0 md:hidden backdrop-blur-sm"></div>
+
+    <!-- MAIN APP CONTAINER -->
     <div class="relative w-full h-full md:h-[90vh] md:w-[1200px] glass-panel md:rounded-3xl flex overflow-hidden shadow-2xl">
         
-        <!-- SIDEBAR (Users, QR, File Status) -->
-        <aside id="sidebar" class="absolute md:relative z-20 w-full md:w-80 h-full bg-slate-900/95 md:bg-transparent border-r border-white/10 flex flex-col transition-transform duration-300 transform -translate-x-full md:translate-x-0">
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="absolute md:relative z-40 w-[85%] md:w-80 h-full bg-slate-900 border-r border-white/10 flex flex-col transform -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
             
             <!-- Sidebar Header -->
-            <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-900">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                         <i class="fa-solid fa-bolt text-white"></i>
                     </div>
                     <div>
-                        <h1 class="font-bold text-lg tracking-wide">QR Send</h1>
-                        <p class="text-xs text-slate-400 font-mono">ULTIMATE PRO</p>
+                        <h1 class="font-bold text-lg tracking-wide text-white">QR Send</h1>
+                        <p class="text-xs text-slate-400 font-mono">LITE MODE</p>
                     </div>
                 </div>
-                <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <!-- Close Button (Mobile Only) -->
+                <button onclick="toggleSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
             </div>
 
             <!-- Connection Panel (QR) -->
-            <div id="connect-panel" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6 overflow-y-auto">
+            <div id="connect-panel" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6 overflow-y-auto bg-slate-900">
                 
-                <!-- 3D QR Card -->
-                <div class="relative group" data-tilt data-tilt-max="15" data-tilt-speed="400" data-tilt-glare data-tilt-max-glare="0.2">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                    <div class="relative bg-white p-4 rounded-xl shadow-2xl">
-                        <div id="qrcode" class="opacity-90"></div>
-                    </div>
+                <!-- QR Card (Tilt disabled on mobile via JS) -->
+                <div id="qr-container" class="relative bg-white p-4 rounded-xl shadow-xl w-full max-w-[240px] flex justify-center">
+                    <div id="qrcode" class="w-full flex justify-center"></div>
                 </div>
 
                 <div class="text-center">
                     <h3 class="text-white font-semibold mb-1">Scan to Connect</h3>
-                    <p class="text-xs text-slate-400">Point your camera at the QR code</p>
+                    <p class="text-xs text-slate-400">Open this app on another device</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 w-full">
-                    <button onclick="shareQRCode()" class="glass-input py-3 rounded-lg hover:bg-white/10 text-sm font-medium transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-share-nodes"></i> Share
+                <div class="flex flex-col gap-3 w-full">
+                    <button onclick="startScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl shadow-lg shadow-indigo-500/20 text-sm font-bold transition flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-camera text-lg"></i> SCAN QR CODE
                     </button>
-                    <button onclick="startScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg shadow-lg shadow-indigo-500/20 text-sm font-medium transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-camera"></i> Scan
+                    <button onclick="shareQRCode()" class="bg-slate-800 border border-white/10 text-white py-4 rounded-xl hover:bg-slate-700 text-sm font-medium transition flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-share-nodes"></i> Share Link
                     </button>
                 </div>
             </div>
 
-            <!-- File Transfer List (Active when connected) -->
-            <div id="files-panel" class="hidden flex-1 flex flex-col p-4 overflow-hidden">
-                <div class="flex justify-between items-center mb-4 px-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">File Queue</span>
-                    <button onclick="document.getElementById('file-input').click()" class="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-plus"></i> ADD
+            <!-- File Transfer List -->
+            <div id="files-panel" class="hidden flex-1 flex flex-col p-0 bg-slate-900 overflow-hidden">
+                <div class="p-4 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Transfers</span>
+                    <button onclick="document.getElementById('file-input').click()" class="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold border border-indigo-500/20">
+                        + NEW FILE
                     </button>
                 </div>
                 
                 <input type="file" id="file-input" multiple class="hidden">
-                <div id="transfer-list" class="flex-1 overflow-y-auto space-y-3 pr-2">
-                    <!-- Dynamic File Items go here -->
-                </div>
+                <div id="transfer-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
             </div>
 
-            <!-- Connection Status Footer -->
-            <div class="p-4 border-t border-white/5 bg-slate-900/50">
+            <!-- Footer Status -->
+            <div class="p-4 border-t border-white/5 bg-slate-950">
                 <div class="flex items-center gap-3">
-                    <div id="status-indicator" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                    <div id="status-indicator" class="w-2 h-2 rounded-full bg-red-500 transition-colors duration-300"></div>
                     <span id="connection-status" class="text-sm font-medium text-slate-300">Disconnected</span>
                 </div>
             </div>
         </aside>
 
         <!-- MAIN CHAT AREA -->
-        <main class="flex-1 flex flex-col relative bg-slate-900/20">
+        <main class="flex-1 flex flex-col relative w-full h-full bg-slate-900/50">
             
             <!-- Chat Header -->
-            <header class="h-20 border-b border-white/5 flex justify-between items-center px-6 glass-panel z-10">
-                <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="md:hidden w-10 h-10 rounded-full glass-input flex items-center justify-center">
-                        <i class="fa-solid fa-bars"></i>
+            <header class="h-16 md:h-20 border-b border-white/5 flex justify-between items-center px-4 md:px-6 bg-slate-900/90 z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-white active:bg-white/10">
+                        <i class="fa-solid fa-bars text-xl"></i>
                     </button>
                     
                     <div class="flex items-center gap-3">
                         <div class="relative">
-                            <div class="w-10 h-10 rounded-full bg-slate-700 overflow-hidden border border-white/20">
+                            <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-slate-700 overflow-hidden border border-white/20">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Peer" alt="Avatar">
                             </div>
-                            <div id="typing-indicator" class="hidden absolute -bottom-1 -right-1 w-4 h-4 bg-slate-800 rounded-full flex items-center justify-center border border-slate-600">
-                                <div class="loader w-2 h-2 border-2"></div>
-                            </div>
+                            <div id="typing-indicator" class="hidden absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border border-slate-900 animate-pulse"></div>
                         </div>
-                        <div>
-                            <h2 class="font-semibold text-white">Remote Peer</h2>
-                            <p class="text-xs text-emerald-400 flex items-center gap-1">
-                                <i class="fa-solid fa-shield-halved text-[10px]"></i> E2E Encrypted
-                            </p>
+                        <div class="leading-tight">
+                            <h2 class="font-bold text-white text-sm md:text-base">Peer</h2>
+                            <p class="text-[10px] md:text-xs text-emerald-400 font-mono">SECURE</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <button id="sound-toggle" onclick="toggleSoundMode()" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition text-slate-300" title="Toggle Sound">
+                <div class="flex items-center gap-1 md:gap-2">
+                    <button id="sound-toggle" onclick="toggleSoundMode()" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-white active:bg-white/5">
                         <i class="fa-solid fa-bell"></i>
                     </button>
-                    <div class="h-6 w-px bg-white/10 mx-2"></div>
-                    <button onclick="initCall(false)" class="w-10 h-10 rounded-full bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 flex items-center justify-center transition border border-emerald-500/30">
+                    <button onclick="initCall(false)" class="w-10 h-10 rounded-full flex items-center justify-center text-emerald-400 bg-emerald-500/10 active:bg-emerald-500/20">
                         <i class="fa-solid fa-phone"></i>
                     </button>
-                    <button onclick="initCall(true)" class="w-10 h-10 rounded-full bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 flex items-center justify-center transition border border-indigo-500/30">
+                    <button onclick="initCall(true)" class="w-10 h-10 rounded-full flex items-center justify-center text-indigo-400 bg-indigo-500/10 active:bg-indigo-500/20">
                         <i class="fa-solid fa-video"></i>
                     </button>
                 </div>
             </header>
 
             <!-- Messages Area -->
-            <div id="messages" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-                <!-- Welcome Message -->
+            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
                 <div class="flex justify-center my-4">
-                    <span class="px-4 py-1 rounded-full bg-slate-800/50 text-xs text-slate-400 border border-white/5 backdrop-blur">
-                        Conversation Started
+                    <span class="px-3 py-1 rounded-full bg-slate-800 text-[10px] text-slate-400 border border-white/5">
+                        End-to-End Encrypted
                     </span>
                 </div>
             </div>
 
-            <!-- Reply Context -->
-            <div id="reply-bar" class="hidden px-6 py-2 bg-slate-800/80 border-t border-white/5 backdrop-blur-sm flex justify-between items-center animate-pulse">
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <div class="w-1 h-8 bg-indigo-500 rounded-full"></div>
-                    <div>
-                        <p class="text-xs text-indigo-400 font-bold">Replying to</p>
-                        <p id="reply-text-preview" class="text-xs text-slate-300 truncate max-w-[200px]"></p>
-                    </div>
+            <!-- Reply Bar -->
+            <div id="reply-bar" class="hidden px-4 py-2 bg-slate-800 border-l-4 border-indigo-500 justify-between items-center shrink-0">
+                <div class="overflow-hidden">
+                    <p class="text-[10px] text-indigo-400 font-bold uppercase">Replying to</p>
+                    <p id="reply-text-preview" class="text-xs text-slate-300 truncate"></p>
                 </div>
-                <button onclick="cancelReply()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="cancelReply()" class="p-2 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <!-- Input Area -->
-            <div class="p-4 md:p-6 pb-6 md:pb-8">
-                <div class="glass-input rounded-2xl p-2 pl-4 flex items-center gap-2 shadow-lg">
-                    <button onclick="document.getElementById('img-input').click()" class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 transition flex items-center justify-center">
+            <div class="p-3 md:p-6 bg-slate-900 md:bg-transparent shrink-0">
+                <div class="glass-input bg-slate-800 md:bg-slate-800/50 rounded-full p-1.5 pl-4 flex items-center gap-2 shadow-lg">
+                    <button onclick="document.getElementById('img-input').click()" class="w-8 h-8 rounded-full text-slate-400 hover:text-indigo-400 flex items-center justify-center">
                         <i class="fa-regular fa-image text-lg"></i>
-                    </button>
-                    <button onclick="document.getElementById('file-input').click()" class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 transition flex items-center justify-center md:hidden">
-                        <i class="fa-solid fa-paperclip text-lg"></i>
                     </button>
                     
                     <input type="file" id="img-input" accept="image/*" class="hidden">
                     
-                    <input type="text" id="msg-input" class="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 text-sm md:text-base h-10" placeholder="Type a message..." autocomplete="off">
+                    <input type="text" id="msg-input" class="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 text-base h-10 min-w-0" placeholder="Message..." autocomplete="off">
                     
-                    <button onclick="sendText()" class="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition transform active:scale-95 flex items-center justify-center">
-                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    <button onclick="sendText()" class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+                        <i class="fa-solid fa-paper-plane text-sm translate-x-px translate-y-px"></i>
                     </button>
                 </div>
             </div>
@@ -253,86 +254,85 @@
         </main>
     </div>
 
-    <!-- === OVERLAYS & MODALS === -->
+    <!-- === OVERLAYS === -->
 
-    <!-- Scanner Overlay -->
-    <div id="scanner-overlay" class="fixed inset-0 z-50 bg-black/95 hidden flex-col items-center justify-center p-6">
-        <button onclick="stopScanner()" class="absolute top-6 right-6 text-white text-2xl hover:text-red-500 transition"><i class="fa-solid fa-xmark"></i></button>
-        <div class="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
-            <div id="qr-reader" class="w-full h-full"></div>
-            <div class="absolute inset-0 pointer-events-none border-[40px] border-black/50"></div>
-            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div class="w-64 h-64 border-2 border-indigo-500 rounded-lg relative">
-                    <div class="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-indigo-500 -mt-1 -ml-1"></div>
-                    <div class="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-indigo-500 -mt-1 -mr-1"></div>
-                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-indigo-500 -mb-1 -ml-1"></div>
-                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-indigo-500 -mb-1 -mr-1"></div>
-                </div>
-            </div>
+    <!-- Scanner -->
+    <div id="scanner-overlay" class="fixed inset-0 z-[60] bg-black hidden flex-col">
+        <div class="p-4 flex justify-between items-center bg-black/50 absolute top-0 w-full z-10">
+            <span class="text-white font-bold">Scan QR</span>
+            <button onclick="stopScanner()" class="w-8 h-8 bg-white/20 rounded-full text-white"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <p class="text-slate-400 mt-6 text-center font-light">Align the QR code within the frame</p>
+        <div id="qr-reader" class="w-full h-full object-cover bg-black"></div>
     </div>
 
-    <!-- Call Overlay (Incoming) -->
-    <div id="incoming-call-ui" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center">
-        <div class="text-center floating-element">
-            <div class="w-24 h-24 rounded-full bg-slate-800 border-4 border-indigo-500 mx-auto mb-6 overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.5)]">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Peer" class="w-full h-full object-cover">
+    <!-- Incoming Call -->
+    <div id="incoming-call-ui" class="fixed inset-0 z-[70] bg-slate-900 flex-col items-center justify-center hidden">
+        <div class="flex flex-col items-center animate-bounce">
+            <div class="w-32 h-32 rounded-full border-4 border-indigo-500 p-1 mb-6">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Peer" class="w-full h-full rounded-full bg-slate-800">
             </div>
-            <h2 id="incoming-call-type" class="text-2xl font-bold text-white mb-2">Incoming Video Call</h2>
-            <p class="text-indigo-400 animate-pulse">Peer is calling...</p>
+            <h2 id="incoming-call-type" class="text-2xl font-bold text-white">Incoming Call</h2>
+            <p class="text-indigo-400 mt-2">Connecting...</p>
         </div>
-        <div class="flex gap-8 mt-12">
-            <button onclick="rejectCall()" class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white text-2xl shadow-lg shadow-red-500/40 transition transform hover:scale-110 flex items-center justify-center">
+        <div class="flex gap-10 mt-16">
+            <button onclick="rejectCall()" class="w-20 h-20 rounded-full bg-red-500 text-white text-3xl shadow-xl active:scale-95 flex items-center justify-center">
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
-            <button onclick="answerCall()" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-2xl shadow-lg shadow-emerald-500/40 transition transform hover:scale-110 flex items-center justify-center">
+            <button onclick="answerCall()" class="w-20 h-20 rounded-full bg-emerald-500 text-white text-3xl shadow-xl active:scale-95 flex items-center justify-center animate-pulse">
                 <i class="fa-solid fa-phone"></i>
             </button>
         </div>
     </div>
 
-    <!-- Active Call UI -->
-    <div id="active-call-ui" class="fixed inset-0 z-50 bg-black hidden">
+    <!-- Active Call -->
+    <div id="active-call-ui" class="fixed inset-0 z-[70] bg-black hidden">
         <video id="remote-video" autoplay playsinline class="w-full h-full object-cover"></video>
         
-        <!-- Local Video (PiP) -->
-        <div class="absolute top-6 right-6 w-32 md:w-48 aspect-[3/4] bg-slate-800 rounded-xl overflow-hidden shadow-2xl border border-white/20" id="local-video-container">
+        <div id="local-video-container" class="absolute top-4 right-4 w-28 md:w-48 aspect-[3/4] bg-slate-800 rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl">
             <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
         </div>
 
-        <!-- Controls -->
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-slate-900/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10">
-            <button onclick="toggleMic()" id="btn-mute" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center">
+        <div class="absolute bottom-8 left-0 w-full flex justify-center gap-6 p-4">
+            <button onclick="toggleMic()" id="btn-mute" class="w-14 h-14 rounded-full bg-slate-800/80 text-white border border-white/10 backdrop-blur active:bg-slate-700 flex items-center justify-center text-xl">
                 <i class="fa-solid fa-microphone"></i>
             </button>
-            <button onclick="endCall()" class="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/40 transition transform hover:scale-105 flex items-center justify-center">
+            <button onclick="endCall()" class="w-16 h-16 rounded-full bg-red-600 text-white shadow-xl active:bg-red-700 flex items-center justify-center text-2xl">
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
-            <button onclick="toggleCam()" id="btn-cam" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center">
+            <button onclick="toggleCam()" id="btn-cam" class="w-14 h-14 rounded-full bg-slate-800/80 text-white border border-white/10 backdrop-blur active:bg-slate-700 flex items-center justify-center text-xl">
                 <i class="fa-solid fa-video"></i>
             </button>
         </div>
     </div>
 
     <!-- Image Modal -->
-    <div id="img-modal" class="fixed inset-0 z-50 bg-black/95 hidden items-center justify-center p-4" onclick="if(event.target===this) closeModal()">
-        <button onclick="closeModal()" class="absolute top-6 right-6 text-white/50 hover:text-white text-3xl transition"><i class="fa-solid fa-xmark"></i></button>
-        <img id="modal-img" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl">
-        <a id="modal-dl" href="#" download class="absolute bottom-8 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full shadow-lg font-medium transition flex items-center gap-2">
-            <i class="fa-solid fa-download"></i> Download High-Res
+    <div id="img-modal" class="fixed inset-0 z-[80] bg-black/95 hidden items-center justify-center p-2" onclick="closeModal()">
+        <button class="absolute top-4 right-4 text-white p-2"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        <img id="modal-img" src="" class="max-w-full max-h-[80vh] rounded shadow-2xl">
+        <a id="modal-dl" href="#" download onclick="event.stopPropagation()" class="absolute bottom-10 bg-white text-black px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 active:scale-95">
+            <i class="fa-solid fa-download"></i> Save Image
         </a>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur text-white px-6 py-3 rounded-full shadow-2xl border border-white/10 translate-y-[-150%] transition-transform duration-300 z-[100] flex items-center gap-3">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 translate-y-[-200%] transition-transform duration-300 z-[90] flex items-center gap-3 text-sm font-medium whitespace-nowrap">
         <i class="fa-solid fa-circle-info text-indigo-400"></i>
         <span id="toast-msg">Notification</span>
     </div>
 
     <script>
-        // --- 3D TILT INIT ---
-        VanillaTilt.init(document.querySelectorAll("[data-tilt]"));
+        // --- DEVICE DETECTION ---
+        const isMobile = window.innerWidth < 768;
+
+        // Only enable 3D tilt on desktop for performance
+        if (!isMobile) {
+            VanillaTilt.init(document.querySelectorAll("[data-tilt]"));
+        } else {
+            // Remove tilt attributes on mobile to be safe
+            document.querySelectorAll("[data-tilt]").forEach(el => {
+                el.removeAttribute("data-tilt");
+            });
+        }
 
         // --- CORE VARIABLES ---
         let peer, conn, myId, isHost;
@@ -345,41 +345,36 @@
         let vibrateInterval;
         let qrScanner;
 
-        // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             initApp();
             
-            // Input Listeners
-            const msgInput = document.getElementById('msg-input');
-            msgInput.addEventListener('input', () => {
-                if (conn && conn.open) {
-                    conn.send({ type: 'typing', isTyping: true });
-                    clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(() => {
-                        if (conn && conn.open) conn.send({ type: 'typing', isTyping: false });
-                    }, 1000);
-                }
-            });
-            msgInput.addEventListener('keypress', (e) => {
+            // Fix 100vh on mobile browsers
+            const setVh = () => {
+                let vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            };
+            window.addEventListener('resize', setVh);
+            setVh();
+
+            // Listeners
+            document.getElementById('msg-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendText();
             });
 
-            // Image Upload
             document.getElementById('img-input').addEventListener('change', function() {
                 const file = this.files[0];
                 if (!file) return;
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const msgId = Date.now();
-                    const base64 = e.target.result;
-                    if (conn && conn.open) conn.send({ type: 'image', content: base64, id: msgId });
-                    addImage(base64, 'sent', msgId);
+                    if (conn && conn.open) conn.send({ type: 'image', content: e.target.result, id: msgId });
+                    addImage(e.target.result, 'sent', msgId);
                 };
                 reader.readAsDataURL(file);
                 this.value = '';
             });
 
-            // Drag Local Video
+            // Draggable local video
             dragElement(document.getElementById("local-video-container"));
         });
 
@@ -388,17 +383,29 @@
             document.getElementById('toast-msg').innerText = msg;
             toast.style.transform = "translateX(-50%) translateY(0)";
             setTimeout(() => {
-                toast.style.transform = "translateX(-50%) translateY(-150%)";
+                toast.style.transform = "translateX(-50%) translateY(-200%)";
             }, 3000);
         }
 
+        // Improved Sidebar Toggle
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const overlay = document.querySelector('.bg-black/50'); // You might want to add a backdrop div
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-            } else {
+            const overlay = document.getElementById('sidebar-overlay');
+            const isOpen = sidebar.classList.contains('translate-x-0');
+            
+            if (isOpen) {
+                // Close
+                sidebar.classList.remove('translate-x-0');
                 sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+                overlay.classList.add('opacity-0');
+            } else {
+                // Open
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+                // Small timeout for fade effect
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
             }
         }
 
@@ -420,13 +427,12 @@
             }
         }
 
-        // --- PEERJS LOGIC ---
+        // --- APP LOGIC ---
         function initApp() {
             const hash = window.location.hash.substring(1);
             isHost = !hash;
 
             const peerConfig = {
-                debug: 1,
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -441,18 +447,18 @@
                 myId = id;
                 if (isHost) {
                     const qrEl = document.getElementById('qrcode');
-                    qrEl.innerHTML = ""; // clear
+                    qrEl.innerHTML = ""; 
                     new QRCode(qrEl, { 
                         text: window.location.href + '#' + id, 
-                        width: 160, 
-                        height: 160,
+                        width: isMobile ? 200 : 160, 
+                        height: isMobile ? 200 : 160,
                         colorDark : "#0f172a",
                         colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
+                        correctLevel : QRCode.CorrectLevel.L // Low correction for faster scanning
                     });
                 } else {
                     document.getElementById('connect-panel').classList.add('hidden');
-                    document.getElementById('files-panel').classList.remove('hidden'); // Show files immediately on client
+                    document.getElementById('files-panel').classList.remove('hidden');
                     updateStatus('Connecting...', 'yellow');
                     connectToPeer(hash);
                 }
@@ -461,13 +467,11 @@
             peer.on('connection', (c) => setupConnection(c));
             peer.on('call', (call) => {
                 document.getElementById('incoming-call-ui').style.display = 'flex';
-                document.getElementById('incoming-call-type').innerText = call.metadata?.type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call';
                 window.pendingCall = call;
                 playCallAlert();
             });
             peer.on('error', (err) => {
-                console.error(err);
-                showToast("Connection Error. Retrying...");
+                showToast("Connection Error");
                 if (!isHost) setTimeout(() => window.location.reload(), 2000);
             });
         }
@@ -485,11 +489,15 @@
                 document.getElementById('connect-panel').classList.add('hidden');
                 document.getElementById('files-panel').classList.remove('hidden');
                 document.getElementById('files-panel').classList.add('flex');
+                showToast("Connected Securely");
                 
-                showToast("Secure Connection Established");
-                
-                // On mobile, auto close sidebar on connect
-                if(window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
+                // Close sidebar on mobile when connected
+                if(window.innerWidth < 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('translate-x-0');
+                    sidebar.classList.add('-translate-x-full');
+                    document.getElementById('sidebar-overlay').classList.add('hidden');
+                }
             });
             conn.on('data', handleData);
             conn.on('close', () => { showToast('Peer Disconnected'); setTimeout(() => window.location.reload(), 2000); });
@@ -499,38 +507,24 @@
             const badge = document.getElementById('status-indicator');
             const txt = document.getElementById('connection-status');
             txt.innerText = text;
-            badge.className = `w-2 h-2 rounded-full bg-${color}-500 shadow-[0_0_10px_rgba(var(--color-${color}-500),0.5)]`;
-            
-            // Manual color fix for Tailwind dynamic classes
+            badge.className = `w-2 h-2 rounded-full transition-colors duration-300 bg-${color}-500`;
             if(color === 'yellow') badge.style.backgroundColor = '#eab308';
             if(color === 'emerald') badge.style.backgroundColor = '#10b981';
         }
 
         function handleData(data) {
             switch (data.type) {
-                case 'text': 
-                    addMessage(data.content, 'received', data.reply); 
-                    playMsgSound();
-                    break;
-                case 'image': 
-                    addImage(data.content, 'received', data.id); 
-                    playMsgSound();
-                    break;
-                case 'typing':
-                    document.getElementById('typing-indicator').classList.toggle('hidden', !data.isTyping);
-                    break;
+                case 'text': addMessage(data.content, 'received', data.reply); playMsgSound(); break;
+                case 'image': addImage(data.content, 'received', data.id); playMsgSound(); break;
+                case 'typing': /* Optional: Add typing logic if needed */ break;
                 case 'file-meta': startReceivingFile(data); break;
                 case 'file-chunk': processFileChunk(data); break;
                 case 'file-cancel': handleFileCancel(data.fileId); break;
-                case 'call-rejected': 
-                    showToast('Call Declined'); 
-                    endCallUI(); 
-                    break;
+                case 'call-rejected': showToast('Call Declined'); endCallUI(); break;
                 case 'call-end': endCallUI(); break;
             }
         }
 
-        // --- CHAT FUNCTIONS ---
         function sendText() {
             const input = document.getElementById('msg-input');
             const val = input.value.trim();
@@ -550,28 +544,22 @@
             div.className = `flex w-full ${type === 'sent' ? 'justify-end' : 'justify-start'} msg-enter`;
             
             const isSent = type === 'sent';
-            
-            // 3D Bubble Effect
             const bubbleClass = isSent 
-                ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-lg shadow-indigo-500/20' 
-                : 'bg-slate-700 text-slate-100 rounded-2xl rounded-tl-sm shadow-lg border border-white/5';
+                ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm' 
+                : 'bg-slate-700 text-slate-100 rounded-2xl rounded-tl-sm';
 
             let replyHtml = '';
             if (reply) {
-                replyHtml = `
-                <div class="mb-2 p-2 rounded bg-black/20 border-l-2 border-white/30 text-xs opacity-80">
-                    ${reply.text.substring(0, 40)}...
-                </div>`;
+                replyHtml = `<div class="mb-1 p-1 px-2 rounded bg-black/20 text-[10px] border-l-2 border-white/50 opacity-80">${reply.text.substring(0, 30)}...</div>`;
             }
 
             div.innerHTML = `
-                <div class="max-w-[75%] md:max-w-[60%] group relative">
-                    <div class="p-3 md:p-4 ${bubbleClass} cursor-pointer" onclick="setReply('${text.replace(/'/g, "\\'")}')">
+                <div class="max-w-[80%] group">
+                    <div class="p-3 ${bubbleClass} cursor-pointer shadow-md" onclick="setReply('${text.replace(/'/g, "\\'")}')">
                         ${replyHtml}
-                        <p class="text-sm md:text-base leading-relaxed break-words">${text}</p>
+                        <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">${text}</p>
                         <div class="flex items-center justify-end gap-1 mt-1 opacity-60">
                             <span class="text-[10px]">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                            ${isSent ? '<i class="fa-solid fa-check-double text-[10px]"></i>' : ''}
                         </div>
                     </div>
                 </div>
@@ -586,8 +574,8 @@
             div.className = `flex w-full ${type === 'sent' ? 'justify-end' : 'justify-start'} msg-enter`;
             
             div.innerHTML = `
-                <div class="max-w-[70%] bg-slate-800 p-1 rounded-2xl border border-white/10 shadow-xl cursor-pointer transition hover:scale-[1.02]" onclick="openModal('${src}', '${type}', ${id})">
-                    <img src="${src}" class="rounded-xl max-h-60 object-cover w-full">
+                <div class="max-w-[70%] bg-slate-800 p-1 rounded-2xl border border-white/10 shadow-lg" onclick="openModal('${src}', '${type}', ${id})">
+                    <img src="${src}" class="rounded-xl max-h-48 object-cover w-full">
                 </div>
             `;
             container.appendChild(div);
@@ -609,9 +597,7 @@
         }
 
         function playMsgSound() {
-            const audio = document.getElementById('msg-sound');
-            audio.currentTime = 0;
-            audio.play().catch(e=>{});
+            document.getElementById('msg-sound').play().catch(e=>{});
         }
 
         // --- FILE TRANSFER ---
@@ -628,62 +614,49 @@
         function createFileUI(id, name, type, size) {
             const div = document.createElement('div');
             div.id = `file-${id}`;
-            div.className = 'bg-slate-800/80 p-3 rounded-lg border border-white/5 relative overflow-hidden group';
+            div.className = 'bg-slate-800/80 p-3 rounded-lg border border-white/5 relative overflow-hidden mb-2';
             
             const icon = type === 'Sending' ? 'fa-arrow-up text-indigo-400' : 'fa-arrow-down text-emerald-400';
             const sizeStr = (size / (1024*1024)).toFixed(2) + ' MB';
 
             div.innerHTML = `
-                <div class="flex justify-between items-start z-10 relative">
+                <div class="flex justify-between items-center z-10 relative">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center">
                             <i class="fa-solid ${icon}"></i>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-sm text-white truncate font-medium w-32">${name}</p>
-                            <p class="text-xs text-slate-500">${sizeStr} • <span id="status-${id}" class="text-slate-300">Waiting</span></p>
+                            <p class="text-sm text-white truncate w-24">${name}</p>
+                            <p class="text-[10px] text-slate-500">${sizeStr} • <span id="status-${id}" class="text-slate-300">Wait</span></p>
                         </div>
                     </div>
-                    <button onclick="cancelTransfer('${id}', '${type}')" class="text-slate-600 hover:text-red-400 transition"><i class="fa-solid fa-times"></i></button>
+                    <button onclick="cancelTransfer('${id}', '${type}')" class="text-slate-600 px-2"><i class="fa-solid fa-times"></i></button>
                 </div>
-                <!-- Progress Bar -->
-                <div class="absolute bottom-0 left-0 h-1 bg-slate-700 w-full">
-                    <div id="bar-${id}" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-300"></div>
+                <div class="absolute bottom-0 left-0 h-0.5 bg-slate-700 w-full">
+                    <div id="bar-${id}" class="h-full bg-indigo-500 w-0 transition-all duration-300"></div>
                 </div>
             `;
             document.getElementById('transfer-list').prepend(div);
         }
 
         function processFileQueue() {
-            if (isTransferring || fileQueue.length === 0) return;
-            if (!conn || !conn.open) return;
-
+            if (isTransferring || fileQueue.length === 0 || !conn || !conn.open) return;
             const item = fileQueue.shift();
             activeTransfer = item; isTransferring = true;
-            
             conn.send({ type: 'file-meta', fileId: item.id, name: item.file.name, size: item.file.size });
 
             const reader = new FileReader();
-            let offset = 0; let start = Date.now();
-            
+            let offset = 0;
             reader.onload = (e) => {
-                if (!activeTransfer) return;
-                if (conn && conn.open) {
-                    conn.send({ type: 'file-chunk', fileId: item.id, data: e.target.result });
-                    offset += e.target.result.byteLength;
-                    updateFileProgress(item.id, offset, item.file.size);
-                    
-                    if (offset < item.file.size) {
-                        // High speed chunking
-                        setTimeout(readNext, 0); 
-                    } else { 
-                        isTransferring = false; 
-                        document.getElementById(`status-${item.id}`).innerText = "Sent";
-                        document.getElementById(`status-${item.id}`).className = "text-emerald-400 font-bold";
-                        setTimeout(processFileQueue, 100); 
-                    }
-                } else {
-                    isTransferring = false;
+                if (!activeTransfer || !conn.open) return;
+                conn.send({ type: 'file-chunk', fileId: item.id, data: e.target.result });
+                offset += e.target.result.byteLength;
+                updateFileProgress(item.id, offset, item.file.size);
+                if (offset < item.file.size) setTimeout(readNext, 1); 
+                else { 
+                    isTransferring = false; 
+                    updateFileStatus(item.id, "Sent", "emerald");
+                    setTimeout(processFileQueue, 50); 
                 }
             };
             const readNext = () => reader.readAsArrayBuffer(item.file.slice(offset, offset + 16384));
@@ -693,12 +666,7 @@
         function startReceivingFile(meta) {
             receiving[meta.fileId] = { name: meta.name, size: meta.size, received: 0, buffer: [] };
             createFileUI(meta.fileId, meta.name, 'Receiving', meta.size);
-            document.getElementById(`status-${meta.fileId}`).innerText = "Receiving...";
-            
-            // Auto open sidebar if receiving
-            if(window.innerWidth >= 768) {
-               // document.getElementById('sidebar').classList.remove('-translate-x-full');
-            }
+            updateFileStatus(meta.fileId, "Receiving...", "yellow");
         }
 
         function processFileChunk(data) {
@@ -714,14 +682,9 @@
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = f.name;
-                
-                // Auto Download
                 link.click();
-                
                 delete receiving[data.fileId];
-                const status = document.getElementById(`status-${data.fileId}`);
-                status.innerText = "Downloaded";
-                status.className = "text-emerald-400 font-bold";
+                updateFileStatus(data.fileId, "Saved", "emerald");
             }
         }
 
@@ -729,6 +692,14 @@
             const pct = Math.round((cur / tot) * 100);
             const bar = document.getElementById(`bar-${id}`);
             if (bar) bar.style.width = pct + '%';
+        }
+
+        function updateFileStatus(id, text, color) {
+            const el = document.getElementById(`status-${id}`);
+            if(el) {
+                el.innerText = text;
+                el.className = `text-${color}-400 font-bold`;
+            }
         }
 
         function cancelTransfer(id, type) {
@@ -742,69 +713,48 @@
 
         function handleFileCancel(id) {
             const el = document.getElementById(`file-${id}`);
-            if (el) {
-                el.innerHTML = '<div class="p-2 text-red-400 text-xs font-bold text-center bg-red-900/20">Transfer Cancelled by Peer</div>';
-                setTimeout(() => el.remove(), 2000);
-            }
+            if (el) el.innerHTML = '<div class="p-2 text-red-400 text-xs text-center">Cancelled</div>';
             delete receiving[id];
         }
 
-
-        // --- CALL & MEDIA LOGIC ---
+        // --- CALLS ---
         function playCallAlert() {
             if (callMode === 'silent') return;
-            if (callMode === 'ring') {
-                const audio = document.getElementById('ringtone');
-                audio.currentTime = 0;
-                audio.play().catch(e => {});
-            }
-            if (navigator.vibrate && (callMode === 'ring' || callMode === 'vibrate')) {
-                vibrateInterval = setInterval(() => navigator.vibrate([500, 200, 500]), 1500);
-            }
+            if (callMode === 'ring') document.getElementById('ringtone').play().catch(e => {});
+            if (navigator.vibrate) vibrateInterval = setInterval(() => navigator.vibrate([500]), 1000);
         }
 
         function stopCallAlert() {
             const audio = document.getElementById('ringtone');
-            audio.pause();
-            audio.currentTime = 0;
+            audio.pause(); audio.currentTime = 0;
             if (vibrateInterval) clearInterval(vibrateInterval);
-            navigator.vibrate(0);
         }
 
-        // Permissions & Call Start
         function initCall(vid) {
             navigator.mediaDevices.getUserMedia({ video: vid, audio: true })
                 .then(stream => {
                     localStream = stream;
                     document.getElementById('active-call-ui').style.display = 'block';
                     document.getElementById('local-video').srcObject = stream;
-                    
                     const call = peer.call(conn.peer, stream, { metadata: { type: vid ? 'video' : 'audio' } });
                     setupCallEvents(call);
                 })
-                .catch(err => {
-                    showToast("Microphone/Camera Permission Denied");
-                });
+                .catch(err => showToast("Microphone Permission Denied"));
         }
 
         function answerCall() {
             stopCallAlert();
             document.getElementById('incoming-call-ui').style.display = 'none';
             const vid = window.pendingCall.metadata.type === 'video';
-            
             navigator.mediaDevices.getUserMedia({ video: vid, audio: true })
                 .then(stream => {
                     localStream = stream;
                     document.getElementById('active-call-ui').style.display = 'block';
                     document.getElementById('local-video').srcObject = stream;
-                    
                     window.pendingCall.answer(stream);
                     setupCallEvents(window.pendingCall);
                 })
-                .catch(err => {
-                    console.error(err);
-                    showToast("Error accessing media devices");
-                });
+                .catch(err => showToast("Error: " + err.message));
         }
 
         function setupCallEvents(call) {
@@ -823,7 +773,6 @@
             stopCallAlert();
             if (conn && conn.open) conn.send({ type: 'call-rejected' });
             document.getElementById('incoming-call-ui').style.display = 'none';
-            window.pendingCall = null;
         }
 
         function endCallUI() {
@@ -835,21 +784,23 @@
                 localStream = null;
             }
             activeCall = null;
-            window.pendingCall = null;
         }
 
         function toggleMic() { 
             const t = localStream.getAudioTracks()[0]; 
             t.enabled = !t.enabled; 
-            document.getElementById('btn-mute').classList.toggle('bg-red-500');
-            document.getElementById('btn-mute').classList.toggle('text-white');
+            const btn = document.getElementById('btn-mute');
+            btn.classList.toggle('bg-red-500');
+            btn.innerHTML = t.enabled ? '<i class="fa-solid fa-microphone"></i>' : '<i class="fa-solid fa-microphone-slash"></i>';
         }
         
         function toggleCam() { 
             const t = localStream.getVideoTracks()[0]; 
             if(t) {
                 t.enabled = !t.enabled; 
-                document.getElementById('btn-cam').classList.toggle('bg-red-500');
+                const btn = document.getElementById('btn-cam');
+                btn.classList.toggle('bg-red-500');
+                btn.innerHTML = t.enabled ? '<i class="fa-solid fa-video"></i>' : '<i class="fa-solid fa-video-slash"></i>';
             }
         }
 
@@ -858,30 +809,26 @@
             const canvas = document.querySelector('#qrcode canvas');
             if(canvas) {
                 canvas.toBlob(blob => {
-                    const file = new File([blob], "qr_connect.png", { type: "image/png" });
+                    const file = new File([blob], "connect.png", { type: "image/png" });
                     if (navigator.share) navigator.share({ files: [file], url: window.location.href + '#' + myId });
-                    else showToast("Browser sharing not supported");
+                    else showToast("Share not supported");
                 });
-            } else {
-                showToast("Generate QR first!");
-            }
+            } else showToast("QR not ready");
         }
 
         function startScanner() {
             document.getElementById('scanner-overlay').style.display = 'flex';
             qrScanner = new Html5Qrcode("qr-reader");
-            qrScanner.start({ facingMode: "environment" }, { fps: 30, qrbox: 250 }, t => {
+            const config = { fps: 20, qrbox: isMobile ? 200 : 250 };
+            qrScanner.start({ facingMode: "environment" }, config, t => {
                 stopScanner();
                 const id = t.includes('#') ? t.split('#')[1] : t;
                 if(id) { window.location.hash = id; window.location.reload(); }
-            }).catch(err => {
-                stopScanner();
-                showToast("Camera Error");
-            });
+            }).catch(err => { stopScanner(); showToast("Camera Error"); });
         }
 
         function stopScanner() {
-            if(qrScanner) { qrScanner.stop().then(() => { qrScanner.clear(); document.getElementById('scanner-overlay').style.display = 'none'; }); }
+            if(qrScanner) qrScanner.stop().then(() => { qrScanner.clear(); document.getElementById('scanner-overlay').style.display = 'none'; });
             else document.getElementById('scanner-overlay').style.display = 'none';
         }
 
@@ -892,15 +839,13 @@
         }
         function closeModal() { document.getElementById('img-modal').style.display = 'none'; }
 
-        // Make Video Draggable
         function dragElement(elmnt) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             elmnt.onmousedown = dragMouseDown;
             elmnt.ontouchstart = dragMouseDown;
-
             function dragMouseDown(e) {
                 e = e || window.event;
-                // e.preventDefault(); // allow touch
+                // e.preventDefault(); // Enable touch scroll elsewhere
                 pos3 = e.clientX || e.touches[0].clientX;
                 pos4 = e.clientY || e.touches[0].clientY;
                 document.onmouseup = closeDragElement;
@@ -908,13 +853,11 @@
                 document.ontouchend = closeDragElement;
                 document.ontouchmove = elementDrag;
             }
-
             function elementDrag(e) {
                 e = e || window.event;
                 // e.preventDefault();
                 const clientX = e.clientX || e.touches[0].clientX;
                 const clientY = e.clientY || e.touches[0].clientY;
-                
                 pos1 = pos3 - clientX;
                 pos2 = pos4 - clientY;
                 pos3 = clientX;
@@ -922,7 +865,6 @@
                 elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
                 elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
             }
-
             function closeDragElement() {
                 document.onmouseup = null;
                 document.onmousemove = null;
